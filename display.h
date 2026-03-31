@@ -20,6 +20,6 @@ void Display_init(void);
 void Display_refresh(PageID page_id);
 
 /* Vpp/Vrms 子模式切换 (任务7, KEY2 触发) */
-void Display_toggleVppSubMode(void);
+void Display_toggleSubMode(PageID page_id);
 
 #endif /* __DISPLAY_H__ */

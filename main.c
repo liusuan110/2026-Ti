@@ -115,26 +115,26 @@ int main(void)
         key_event = Key_getEvent();
 
         if (key_event == KEY_1_SHORT) {
-            if (cur_page == PAGE_VPP) {
+            if (cur_page != PAGE_INFO) {
                 if (wait_second_click) {
-                    /* VPPÒ³Ë«ï¿½ï¿½: ï¿½Ð»ï¿½ Vpp/Vrms */
-                    Display_toggleVppSubMode();
+                    /* Ë«»÷: ÇÐ»»Í¬Ò³µÄ×ÓÄ£Ê½ */
+                    Display_toggleSubMode(cur_page);
                     wait_second_click = 0;
                     second_click_ticks = 0;
                     need_refresh = 1;
                 } else {
-                    /* ï¿½ÈµÈ´ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½, ï¿½ï¿½Ê±ï¿½ó°´µï¿½ï¿½ï¿½ï¿½ï¿½Ò³ï¿½ï¿½ï¿½ï¿½ */
+                    /* µÈ´ýµÚ¶þ´Îµã»÷ */
                     wait_second_click = 1;
                     second_click_ticks = 0;
                 }
             } else {
-                /* ï¿½ï¿½ï¿½ï¿½Ò³ï¿½æµ¥ï¿½ï¿½Ö±ï¿½Ó·ï¿½Ò³ */
+                /* µ¥»÷Ö±½Ó·­Ò³ */
                 page_next();
                 need_refresh = 1;
             }
         }
 
-        /* VPPÒ³Ë«ï¿½ï¿½ï¿½ï¿½Ê±: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ */
+        /* Ë«»÷³¬Ê± */
         if (wait_second_click) {
             second_click_ticks++;
             if (second_click_ticks >= DBL_CLICK_WINDOW_TICKS) {
@@ -144,7 +144,6 @@ int main(void)
                 need_refresh = 1;
             }
         }
-
         /* Unified tick-based refresh with rate limiting */
         refresh_tick++;
 

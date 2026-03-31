@@ -45,9 +45,9 @@ static void page_info(void)
     LCD_clear();
 
     LCD_showGB2312Str(0, 8, "2026F117");
-    LCD_showGB2312Str(2, 8, "ÁõöÕ°²");
-    LCD_showGB2312Str(4, 8, "ÕÅÐ¾È»");
-    LCD_showGB2312Str(6, 8, "Èî¼ÑÀö");
+    LCD_showGB2312Str(2, 8, "ï¿½ï¿½ï¿½Õ°ï¿½");
+    LCD_showGB2312Str(4, 8, "ï¿½ï¿½Ð¾È»");
+    LCD_showGB2312Str(6, 8, "ï¿½ï¿½ï¿½ï¿½ï¿½");
 }
 
 /* Task 6: frequency page. */
