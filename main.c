@@ -6,7 +6,7 @@
  * =============================================
  *
  * State machine:
- *   KEY1 short press -> next page (INFO -> FREQ -> VPP -> DUTY -> WAVE -> FFT -> ...)
+ *   KEY1 short press -> next page (INFO -> FREQ -> WAVE -> VPP -> FFT -> ...)
  *   KEY1 double press (only in VPP page) -> Vpp/Vrms switch
  *
  * Each page configures its peripherals on entry and stops them on exit.
@@ -53,9 +53,6 @@ static void page_leave(PageID page_id)
     case PAGE_FREQ:
         Capture_stopFreq();
         break;
-    case PAGE_DUTY:
-        Capture_stopDuty();
-        break;
     default:
         /* VPP/WAVE/FFT pages use ADC single-shot, no stop needed */
         break;
@@ -69,11 +66,6 @@ static void page_enter(PageID page_id)
     switch (page_id) {
     case PAGE_FREQ:
         Capture_startFreq();
-        break;
-    case PAGE_WAVE:
-        break;
-    case PAGE_DUTY:
-        Capture_startDuty();
         break;
     default:
         /* ADC pages configure on-demand inside Display_refresh */
@@ -157,11 +149,6 @@ int main(void)
             switch (cur_page) {
             case PAGE_FREQ:
                 if (g_freq_ready && refresh_tick >= 10) { /* ~200ms */
-                    do_refresh = 1;
-                }
-                break;
-            case PAGE_DUTY:
-                if (g_duty_ready && refresh_tick >= 10) {
                     do_refresh = 1;
                 }
                 break;
