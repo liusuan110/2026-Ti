@@ -6,8 +6,8 @@
  * =============================================
  *
  * State machine:
- *   KEY1 short press -> next page (INFO -> FREQ -> VPP -> DUTY -> WAVE -> FFT -> ...)
- *   KEY1 double press (only in VPP page) -> Vpp/Vrms switch
+ *   KEY1 short press -> next page (按任务三显示顺序轮转)
+ *   KEY1 double press (FREQ/VPP page) -> 显示子模式切换
  *
  * Each page configures its peripherals on entry and stops them on exit.
  */
@@ -25,6 +25,8 @@
 /* ============ Global State ============ */
 static PageID cur_page  = PAGE_INFO;
 static PageID prev_page = PAGE_COUNT; /* invalid initially, force first refresh */
+static const PageID g_page_order[] = {PAGE_INFO, PAGE_FREQ, PAGE_WAVE, PAGE_VPP, PAGE_FFT};
+static uint8_t g_page_index = 0;
 
 #define DBL_CLICK_WINDOW_TICKS 15 /* 15 * 20ms = 300ms */
 
@@ -35,11 +37,8 @@ static void page_enter(PageID page_id);
 static void page_next(void)
 {
     page_leave(cur_page);
-
-    cur_page = (PageID)((uint8_t)cur_page + 1);
-    if (cur_page >= PAGE_COUNT) {
-        cur_page = PAGE_INFO;
-    }
+    g_page_index = (uint8_t)((g_page_index + 1) % (sizeof(g_page_order) / sizeof(g_page_order[0])));
+    cur_page = g_page_order[g_page_index];
 
     page_enter(cur_page);
 }
@@ -115,26 +114,26 @@ int main(void)
         key_event = Key_getEvent();
 
         if (key_event == KEY_1_SHORT) {
-            if (cur_page == PAGE_VPP) {
+            if (cur_page == PAGE_VPP || cur_page == PAGE_FREQ) {
                 if (wait_second_click) {
-                    /* VPPҳ˫��: �л� Vpp/Vrms */
+                    /* 任务页双击: 切换显示子模式 */
                     Display_toggleVppSubMode();
                     wait_second_click = 0;
                     second_click_ticks = 0;
                     need_refresh = 1;
                 } else {
-                    /* �ȵȴ��ڶ���, ��ʱ�󰴵�����ҳ���� */
+                    /* 等待第二击 */
                     wait_second_click = 1;
                     second_click_ticks = 0;
                 }
             } else {
-                /* ����ҳ�浥��ֱ�ӷ�ҳ */
+                /* 其他页面单击翻页 */
                 page_next();
                 need_refresh = 1;
             }
         }
 
-        /* VPPҳ˫����ʱ: ��������ҳ */
+        /* 双击超时后按单击处理翻页 */
         if (wait_second_click) {
             second_click_ticks++;
             if (second_click_ticks >= DBL_CLICK_WINDOW_TICKS) {

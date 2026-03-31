@@ -13,15 +13,19 @@
 /* Page titles (top area, page 0~1). */
 static const char * const page_titles[PAGE_COUNT] = {
     "  Team Info  ",   /* PAGE_INFO */
-    " Freq (U_o1) ",   /* PAGE_FREQ */
-    " Vpp  (U_o2) ",   /* PAGE_VPP  */
-    " Duty (U_o3) ",   /* PAGE_DUTY */
-    " Wave (U_o4) ",   /* PAGE_WAVE */
-    " FFT  (U_o3) "    /* PAGE_FFT  */
+    "Uo1/Uo2 Meas ",   /* PAGE_FREQ */
+    " Vpp  (U_o4) ",   /* PAGE_VPP  */
+    " Debug Duty  ",   /* PAGE_DUTY */
+    "Wave(Uo3/Uo5)",   /* PAGE_WAVE */
+    " FFT  (U_o1) "    /* PAGE_FFT  */
 };
 
 /* Vpp page sub-mode. */
-static uint8_t vpp_sub_mode = 0; /* 0=Vpp, 1=Vrms */
+/* Sub mode:
+ * PAGE_FREQ: 0=Freq(Uo1), 1=Amp(Uo2)
+ * PAGE_VPP : 0=Vpp(Uo4), 1=Vrms(Uo4)
+ */
+static uint8_t vpp_sub_mode = 0;
 
 /* Avoid redundant title redraw. */
 static PageID last_title_page = PAGE_COUNT;
@@ -45,10 +49,20 @@ static void page_info(void)
     LCD_clear();
 
     LCD_showGB2312Str(0, 8, "2026F117");
-    LCD_showGB2312Str(2, 8, "¡ıˆ’∞≤");
-    LCD_showGB2312Str(4, 8, "’≈–æ»ª");
-    LCD_showGB2312Str(6, 8, "»Óº—¿ˆ");
-}
+    VppResult result;
+
+    if (vpp_sub_mode == 0) {
+        if (g_freq_ready) {
+            LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
+            LCD_showMeasure(4, 4, " =", g_freq_hz / 100, 1, "kHz");
+        } else {
+            LCD_showGB2312Str(3, 16, (u8 *)"Measuring...");
+        }
+        LCD_showGB2312Str(6, 4, (u8 *)"KEY2:Freq/Amp");
+        ADC_measureVpp(ADC_CH_UO2, 500, &result);
+        LCD_showMeasure(2, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
+        LCD_showMeasure(4, 4, " =", (uint32_t)result.vpp_mv, 3, "V");
+        LCD_showGB2312Str(6, 4, (u8 *)"KEY2:Freq/Amp");
 
 /* Task 6: frequency page. */
 static void page_freq(void)
@@ -141,7 +155,7 @@ static void page_wave(void)
     draw_title(PAGE_WAVE);
 
     /* Fixed-rate sampling for 5kHz input. */
-    ADC_sampleToBuffer(ADC_CH_UO4, raw, WAVE_RAW_POINTS);
+    ADC_sampleToBuffer(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS);
 
     /* Global min/max. */
     for (i = 0; i < WAVE_RAW_POINTS; i++) {
