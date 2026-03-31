@@ -52,11 +52,11 @@
 /* ============ 页面枚举 ============ */
 typedef enum {
     PAGE_INFO = 0,  /* 任务5: 显示队号姓名 */
-    PAGE_FREQ,      /* 任务6: 方波频率 */
-    PAGE_VPP,       /* 任务7: 正弦波 Vpp/Vrms */
-    PAGE_DUTY,      /* 任务8: 窄脉冲占空比 */
-    PAGE_WAVE,      /* 任务9: 余弦波波形 */
-    PAGE_FFT,       /* 任务10: 窄脉冲频谱 */
+    PAGE_FREQ,      /* 任务7: Uo1/Uo2 频率/幅值切换显示 */
+    PAGE_VPP,       /* 任务9: Uo4 Vpp/Vrms 切换显示 */
+    PAGE_DUTY,      /* 预留调试页(不参与任务三显示顺序) */
+    PAGE_WAVE,      /* 任务8: Uo3/Uo5 波形显示 */
+    PAGE_FFT,       /* 任务10: Uo1 频谱显示 */
     PAGE_COUNT
 } PageID;
 
