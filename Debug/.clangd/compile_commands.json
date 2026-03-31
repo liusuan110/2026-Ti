@@ -1,0 +1,52 @@
+[
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Clock.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/GPIO.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/JLX12864G.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/main.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/adc_measure.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/fft.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/key.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/lcd_draw.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/timer_capture.c"
+   },
+   {
+      "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
+      "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/display.c"
+   }
+]
