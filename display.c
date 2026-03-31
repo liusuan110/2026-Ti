@@ -13,11 +13,10 @@
 /* Page titles (top area, page 0~1). */
 static const char * const page_titles[PAGE_COUNT] = {
     "  Team Info  ",   /* PAGE_INFO */
-    " Freq (U_o1) ",   /* PAGE_FREQ */
-    " Vpp  (U_o2) ",   /* PAGE_VPP  */
-    " Duty (U_o3) ",   /* PAGE_DUTY */
-    " Wave (U_o4) ",   /* PAGE_WAVE */
-    " FFT  (U_o3) "    /* PAGE_FFT  */
+    " Uo1/Uo2 F/A ",   /* PAGE_FREQ */
+    " Uo3/Uo5 Wave",   /* PAGE_WAVE */
+    " Vpp  (U_o4) ",   /* PAGE_VPP  */
+    " FFT  (U_o1) "    /* PAGE_FFT  */
 };
 
 /* Vpp page sub-mode. */
@@ -53,18 +52,24 @@ static void page_info(void)
 /* Task 6: frequency page. */
 static void page_freq(void)
 {
+    VppResult result;
+
     draw_title(PAGE_FREQ);
     LCD_clearPages(2, 7);
 
+    ADC_measureVpp(ADC_CH_UO2, 300, &result);
+
     if (g_freq_ready) {
         LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
-        LCD_showMeasure(4, 4, " =", g_freq_hz / 100, 1, "kHz");
+        LCD_showMeasure(3, 4, " =", g_freq_hz / 100, 1, "kHz");
     } else {
-        LCD_showGB2312Str(3, 16, (u8 *)"Measuring...");
+        LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
     }
+
+    LCD_showMeasure(5, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
 }
 
-/* Task 7: Vpp / Vrms page. */
+/* Task 8: Vpp / Vrms page (Uo4). */
 static void page_vpp(void)
 {
     VppResult result;
@@ -72,7 +77,7 @@ static void page_vpp(void)
     draw_title(PAGE_VPP);
     LCD_clearPages(2, 7);
 
-    ADC_measureVpp(ADC_CH_UO2, 500, &result);
+    ADC_measureVpp(ADC_CH_UO4, 500, &result);
 
     if (vpp_sub_mode == 0) {
         LCD_showMeasure(2, 4, "Vpp=", (uint32_t)result.vpp_mv, 0, "mV");
@@ -82,23 +87,10 @@ static void page_vpp(void)
         LCD_showMeasure(4, 4, "    =", (uint32_t)result.vrms_mv, 3, "V");
     }
 
-    LCD_showGB2312Str(6, 4, (u8 *)"KEY2:Vpp/Vrms");
+    LCD_showGB2312Str(6, 0, (u8 *)"DBL KEY1:Vpp/Vrms");
 }
 
-/* Task 8: duty page. */
-static void page_duty(void)
-{
-    draw_title(PAGE_DUTY);
-    LCD_clearPages(2, 7);
-
-    if (g_duty_ready) {
-        LCD_showMeasure(2, 4, "D=", (uint32_t)g_duty_percent, 2, "%");
-    } else {
-        LCD_showGB2312Str(3, 16, (u8 *)"Measuring...");
-    }
-}
-
-/* Task 9: simplest waveform display. */
+/* Task 7: simplest waveform display (Uo3/Uo5). */
 static void page_wave(void)
 {
     int16_t *raw = g_buf_a;
@@ -141,7 +133,7 @@ static void page_wave(void)
     draw_title(PAGE_WAVE);
 
     /* Fixed-rate sampling for 5kHz input. */
-    ADC_sampleToBuffer(ADC_CH_UO4, raw, WAVE_RAW_POINTS);
+    ADC_sampleToBuffer(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS);
 
     /* Global min/max. */
     for (i = 0; i < WAVE_RAW_POINTS; i++) {
@@ -298,7 +290,7 @@ static void page_wave(void)
     }
 }
 
-/* Task 10: FFT page. */
+/* Task 9: FFT page. */
 static void page_fft(void)
 {
     int16_t *real_buf = g_buf_a;
@@ -344,9 +336,11 @@ static void page_fft(void)
     LCD_drawBars(&bar_data[1], FFT_N / 2 - 1, 6, 2, 4);
 }
 
-void Display_toggleVppSubMode(void)
+void Display_toggleSubMode(PageID page_id)
 {
-    vpp_sub_mode ^= 1;
+    if (page_id == PAGE_VPP) {
+        vpp_sub_mode ^= 1;
+    }
 }
 
 void Display_init(void)
@@ -364,14 +358,11 @@ void Display_refresh(PageID page_id)
     case PAGE_FREQ:
         page_freq();
         break;
-    case PAGE_VPP:
-        page_vpp();
-        break;
-    case PAGE_DUTY:
-        page_duty();
-        break;
     case PAGE_WAVE:
         page_wave();
+        break;
+    case PAGE_VPP:
+        page_vpp();
         break;
     case PAGE_FFT:
         page_fft();
@@ -380,4 +371,3 @@ void Display_refresh(PageID page_id)
         break;
     }
 }
-
