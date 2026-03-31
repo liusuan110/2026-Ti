@@ -11,9 +11,9 @@
  *      用途: 读取单个 ADC 值
  *      调用者: 无 (保留接口)
  *
- *   2. ADC_measureVpp()             — 流式采样测 Vpp/Vrms
- *      用途: 对正弦波 U_o2 连续采样, 只记录最大/最小值
- *      优势: 不需要数组, 只用 2 个变量, 极省 RAM
+ *   2. ADC_measureVpp()             — 多窗口鲁棒 Vpp/Vrms
+ *      用途: 连续采样并做 Top-K/Bottom-K + 窗口中值聚合
+ *      优势: 抑制毛刺点, 高频/低频下稳定性更好
  *      调用者: PAGE_VPP (任务7)
  *
  *   3. ADC_sampleToBuffer()         — 连续采样到数组
@@ -52,7 +52,7 @@ void ADC_init(void);
 /*
  * 流式采样测 Vpp/Vrms (不需要数组, 省 RAM)
  * channel: ADC 通道 (如 ADC_CH_UO2)
- * count:   采样次数 (建议 500, 确保覆盖多个周期捕获到真实极值)
+ * count:   总采样点预算 (函数内部会拆分为多个窗口并做中值聚合)
  * result:  结果存放结构体地址
  */
 void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result);

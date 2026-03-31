@@ -4,6 +4,12 @@
  */
 
 #include "adc_measure.h"
+#include "timer_capture.h"
+
+#define VPP_TOPK               3U
+#define VPP_MAX_WINDOWS        5U
+#define VPP_MIN_POINTS_PER_WIN 16U
+#define VPP_TARGET_CYCLES      4UL
 
 /* 初始化: 将 ADC 引脚设为模拟输入 */
 void ADC_init(void)
@@ -51,31 +57,130 @@ uint16_t ADC_singleSample(uint16_t channel)
  */
 void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
 {
-    uint16_t i;
+    uint16_t i, w;
     uint16_t val;
-    uint16_t max_val = 0;
-    uint16_t min_val = 1023;
+    uint16_t topk[VPP_TOPK];
+    uint16_t botk[VPP_TOPK];
+    uint16_t vpp_windows[VPP_MAX_WINDOWS];
+    uint16_t window_count;
+    uint16_t points_per_window;
+    uint16_t used_windows = 0;
+    uint16_t dly_loop_count = 0;
+    uint32_t freq_hz_snapshot;
     int32_t diff_mv;
+    uint32_t diff_code;
+    uint32_t sum_top, sum_bot;
 
-    /* 配置 ADC: AVCC (3.3V) 基准, 连续单通道 */
+    if (result == 0) return;
+    if (count < VPP_MIN_POINTS_PER_WIN) count = VPP_MIN_POINTS_PER_WIN;
+
+    /* 将总采样点拆成多窗口，随后做中值聚合 */
+    window_count = (count >= 64U) ? VPP_MAX_WINDOWS : 3U;
+    points_per_window = count / window_count;
+    if (points_per_window < VPP_MIN_POINTS_PER_WIN) {
+        points_per_window = VPP_MIN_POINTS_PER_WIN;
+    }
+
+    /* 与频率关联：按目标覆盖 VPP_TARGET_CYCLES 个周期估算采样间隔 */
+    freq_hz_snapshot = g_freq_hz;
+    if (freq_hz_snapshot > 0U && points_per_window > 1U) {
+        uint32_t total_cycles_per_period = SYS_FREQ / freq_hz_snapshot;
+        uint32_t total_window = total_cycles_per_period * VPP_TARGET_CYCLES;
+        uint32_t target_interval = total_window / (points_per_window - 1U);
+        const uint32_t BASE_OVERHEAD = 100U;
+        if (target_interval > BASE_OVERHEAD) {
+            dly_loop_count = (uint16_t)((target_interval - BASE_OVERHEAD) / 5U);
+        }
+    }
+
+    /* 配置 ADC: AVCC (3.3V) 基准, 单通道轮询采样 */
     ADC10CTL0 &= ~ENC;
     ADC10CTL0 = SREF_0 | ADC10SHT_1 | ADC10ON;
     ADC10CTL1 = channel | ADC10DIV_0 | ADC10SSEL_0;
-    /* __delay_cycles(480); */
 
-    for (i = 0; i < count; i++) {
-        ADC10CTL0 |= ENC | ADC10SC;
-        while (ADC10CTL1 & ADC10BUSY)
-            ;
-        val = ADC10MEM;
-        ADC10CTL0 &= ~ENC;
+    for (w = 0; w < window_count; w++) {
+        for (i = 0; i < VPP_TOPK; i++) {
+            topk[i] = 0;
+            botk[i] = 1023;
+        }
 
-        if (val > max_val) max_val = val;
-        if (val < min_val) min_val = val;
+        for (i = 0; i < points_per_window; i++) {
+            uint16_t k;
+            uint16_t dly;
+
+            ADC10CTL0 |= ENC | ADC10SC;
+            while (ADC10CTL1 & ADC10BUSY)
+                ;
+            val = ADC10MEM;
+            ADC10CTL0 &= ~ENC;
+
+            /* Top-K */
+            for (k = 0; k < VPP_TOPK; k++) {
+                if (val > topk[k]) {
+                    uint16_t t;
+                    for (t = (uint16_t)(VPP_TOPK - 1U); t > k; t--) {
+                        topk[t] = topk[t - 1U];
+                    }
+                    topk[k] = val;
+                    break;
+                }
+            }
+
+            /* Bottom-K */
+            for (k = 0; k < VPP_TOPK; k++) {
+                if (val < botk[k]) {
+                    uint16_t t;
+                    for (t = (uint16_t)(VPP_TOPK - 1U); t > k; t--) {
+                        botk[t] = botk[t - 1U];
+                    }
+                    botk[k] = val;
+                    break;
+                }
+            }
+
+            if (dly_loop_count > 0U && (i + 1U < points_per_window)) {
+                dly = dly_loop_count;
+                while (dly--) {
+                    __no_operation();
+                }
+            }
+        }
+
+        sum_top = 0;
+        sum_bot = 0;
+        for (i = 0; i < VPP_TOPK; i++) {
+            sum_top += topk[i];
+            sum_bot += botk[i];
+        }
+
+        if (sum_top > sum_bot) {
+            diff_code = (sum_top - sum_bot) / VPP_TOPK;
+        } else {
+            diff_code = 0;
+        }
+
+        vpp_windows[used_windows++] = (uint16_t)(diff_code * ADC_VREF_MV / 1023U);
     }
 
-    /* Vpp = (max - min) * 3300 / 1023  (mV) */
-    diff_mv = (int32_t)(max_val - min_val) * ADC_VREF_MV / 1023;
+    if (used_windows == 0U) {
+        result->vpp_mv = 0;
+        result->vrms_mv = 0;
+        return;
+    }
+
+    /* 小数组原地排序，取中值 */
+    for (i = 0; i + 1U < used_windows; i++) {
+        uint16_t j;
+        for (j = (uint16_t)(i + 1U); j < used_windows; j++) {
+            if (vpp_windows[j] < vpp_windows[i]) {
+                uint16_t tmp = vpp_windows[i];
+                vpp_windows[i] = vpp_windows[j];
+                vpp_windows[j] = tmp;
+            }
+        }
+    }
+
+    diff_mv = vpp_windows[used_windows / 2U];
     result->vpp_mv = (uint16_t)diff_mv;
 
     /* 对于纯正弦波: Vrms = Vpp / (2 * sqrt(2)) = Vpp * 1000 / 2828 */
