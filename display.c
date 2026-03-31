@@ -29,6 +29,18 @@ static PageID last_title_page = PAGE_COUNT;
 static int16_t g_buf_a[WAVE_RAW_POINTS];
 static int16_t g_buf_b[FFT_N];
 
+/* 清除一行 16 像素高文本带(两页)，用于局部重绘避免整屏闪烁 */
+static void clear_text_band(u8 page_start)
+{
+    u8 p, c;
+    for (p = page_start; p < (u8)(page_start + 2U); p++) {
+        LCD_setAddr(p, 0);
+        for (c = 0; c < 128; c++) {
+            LCD_writeData(0x00);
+        }
+    }
+}
+
 /*
  * 在采样数据中估计“每周期样本点数”(spp)：
  * - 使用归一化前的自相关近似(去均值后点积)
@@ -91,18 +103,23 @@ static void page_info(void)
 static void page_freq(void)
 {
     VppResult result;
+    uint8_t page_changed = (last_title_page != PAGE_FREQ);
 
     draw_title(PAGE_FREQ);
-    LCD_clearPages(2, 7);
+    if (page_changed) {
+        LCD_clearPages(2, 7);
+    }
 
     ADC_measureVpp(ADC_CH_UO2, 300, &result);
 
+    clear_text_band(2);
     if (g_freq_ready) {
         LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
     } else {
         LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
     }
 
+    clear_text_band(5);
     LCD_showMeasure(5, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
 }
 
@@ -110,12 +127,17 @@ static void page_freq(void)
 static void page_vpp(void)
 {
     VppResult result;
+    uint8_t page_changed = (last_title_page != PAGE_VPP);
 
     draw_title(PAGE_VPP);
-    LCD_clearPages(2, 7);
+    if (page_changed) {
+        LCD_clearPages(2, 7);
+    }
 
     ADC_measureVpp(ADC_CH_UO4, 500, &result);
 
+    clear_text_band(2);
+    clear_text_band(4);
     if (vpp_sub_mode == 0) {
         LCD_showMeasure(2, 4, "Vpp=", (uint32_t)result.vpp_mv, 0, "mV");
         LCD_showMeasure(4, 4, "   =", (uint32_t)result.vpp_mv, 3, "V");
@@ -124,6 +146,7 @@ static void page_vpp(void)
         LCD_showMeasure(4, 4, "    =", (uint32_t)result.vrms_mv, 3, "V");
     }
 
+    clear_text_band(6);
     LCD_showGB2312Str(6, 0, (u8 *)"DBL KEY1:Vpp/Vrms");
 }
 
