@@ -29,6 +29,44 @@ static PageID last_title_page = PAGE_COUNT;
 static int16_t g_buf_a[WAVE_RAW_POINTS];
 static int16_t g_buf_b[FFT_N];
 
+/*
+ * 在采样数据中估计“每周期样本点数”(spp)：
+ * - 使用归一化前的自相关近似(去均值后点积)
+ * - 仅搜索有效范围 [3, len/3]，避免过短/过长周期误判
+ */
+static uint16_t wave_estimate_spp(const int16_t *raw, uint16_t len)
+{
+    uint16_t lag;
+    uint16_t best_lag = 0;
+    int32_t sum = 0;
+    int16_t mean;
+    int32_t best_score = 0;
+
+    if (len < 12) return 0;
+
+    for (lag = 0; lag < len; lag++) {
+        sum += raw[lag];
+    }
+    mean = (int16_t)(sum / (int32_t)len);
+
+    for (lag = 3; lag <= (uint16_t)(len / 3); lag++) {
+        uint16_t i;
+        int32_t score = 0;
+        for (i = 0; i + lag < len; i++) {
+            int16_t a = (int16_t)(raw[i] - mean);
+            int16_t b = (int16_t)(raw[i + lag] - mean);
+            score += (int32_t)a * (int32_t)b;
+        }
+
+        if (score > best_score) {
+            best_score = score;
+            best_lag = lag;
+        }
+    }
+
+    return best_lag;
+}
+
 static void draw_title(PageID page_id)
 {
     if (last_title_page == page_id) return;
@@ -96,16 +134,11 @@ static void page_wave(void)
     uint16_t i;
     int16_t adc_min = 1023;
     int16_t adc_max = 0;
-    int16_t midpoint;
-    int16_t trig_hyst;
-    int16_t low_th, high_th;
     int16_t span, pad;
     int16_t map_min, map_max;
     int16_t raw_map_min, raw_map_max;
-    uint16_t c1 = WAVE_RAW_POINTS;
-    uint16_t c2 = WAVE_RAW_POINTS;
-    uint16_t c3 = WAVE_RAW_POINTS;
     uint16_t spp = 0;
+    uint16_t display_spp;
     uint16_t seg_start = 0;
     uint16_t seg_len = WAVE_RAW_POINTS;
     uint16_t seg_end;
@@ -119,7 +152,7 @@ static void page_wave(void)
     const u8 y_bottom = 63;
     const u8 usable_h = (u8)(63 - 16 + 1);
     const u8 x_step = 1;
-    uint8_t armed;
+    uint32_t freq_hint = 0;
 
     /* Frame-to-frame stabilizers */
     static uint8_t seg_inited = 0;
@@ -131,8 +164,16 @@ static void page_wave(void)
 
     draw_title(PAGE_WAVE);
 
-    /* Fixed-rate sampling for 5kHz input. */
-    ADC_sampleToBuffer(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS);
+    /* 采样策略:
+     * - 有频率提示时使用自适应采样，20~30kHz 下覆盖更稳定
+     * - 极高频(如 250kHz)会自动退化为最快采样(dly=0)，靠软件周期估计稳定显示
+     */
+    if (g_freq_period > 0U) {
+        freq_hint = SYS_FREQ / g_freq_period;
+    } else if (g_freq_hz > 0U) {
+        freq_hint = g_freq_hz;
+    }
+    ADC_sampleToBufferAdaptive(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS, freq_hint);
 
     /* Global min/max. */
     for (i = 0; i < WAVE_RAW_POINTS; i++) {
@@ -141,59 +182,22 @@ static void page_wave(void)
     }
     if (adc_max <= adc_min) adc_max = adc_min + 1;
 
-    /* Keep only 2 cycles on screen: Schmitt-triggered rising crossings. */
-    span = (int16_t)(adc_max - adc_min);
-    if (span < 1) span = 1;
-    midpoint = (int16_t)((adc_min + adc_max) / 2);
-    trig_hyst = (int16_t)(span / 16);   /* ~6.25% hysteresis */
-    if (trig_hyst < 3) trig_hyst = 3;
-    low_th = (int16_t)(midpoint - trig_hyst);
-    high_th = (int16_t)(midpoint + trig_hyst);
-
-    armed = 0;
-    for (i = 0; i < WAVE_RAW_POINTS; i++) {
-        if (!armed) {
-            if (raw[i] <= low_th) armed = 1;
-        } else if (raw[i] >= high_th) {
-            c1 = i;
-            break;
+    /* 周期估计 + 固定 2 周期显示，减少高频/欠采样下的触发抖动 */
+    spp = wave_estimate_spp(raw, WAVE_RAW_POINTS);
+    if (spp < 6) {
+        if (seg_inited) {
+            spp = (uint16_t)(last_seg_len / 2U);
+        } else {
+            spp = 20;
         }
     }
+    display_spp = spp;
+    if (display_spp < 6) display_spp = 6;
+    if (display_spp > (WAVE_RAW_POINTS / 2U)) display_spp = (WAVE_RAW_POINTS / 2U);
 
-    if (c1 + 2 < WAVE_RAW_POINTS) {
-        armed = 0;
-        for (i = (uint16_t)(c1 + 2); i < WAVE_RAW_POINTS; i++) {
-            if (!armed) {
-                if (raw[i] <= low_th) armed = 1;
-            } else if (raw[i] >= high_th) {
-                c2 = i;
-                break;
-            }
-        }
-    }
-
-    if (c2 + 2 < WAVE_RAW_POINTS) {
-        armed = 0;
-        for (i = (uint16_t)(c2 + 2); i < WAVE_RAW_POINTS; i++) {
-            if (!armed) {
-                if (raw[i] <= low_th) armed = 1;
-            } else if (raw[i] >= high_th) {
-                c3 = i;
-                break;
-            }
-        }
-    }
-
-    if (c3 < WAVE_RAW_POINTS && c3 > c1) {
-        seg_start = c1;
-        seg_len = (uint16_t)(c3 - c1);       /* exactly 2 cycles */
-    } else if (c2 < WAVE_RAW_POINTS && c2 > c1) {
-        spp = (uint16_t)(c2 - c1);
-        if (spp >= 6 && (uint16_t)(c1 + spp * 2) <= WAVE_RAW_POINTS) {
-            seg_start = c1;
-            seg_len = (uint16_t)(spp * 2);   /* fallback: estimated 2 cycles */
-        }
-    }
+    seg_len = (uint16_t)(display_spp * 2U);
+    if (seg_len > WAVE_RAW_POINTS) seg_len = WAVE_RAW_POINTS;
+    seg_start = (uint16_t)((WAVE_RAW_POINTS - seg_len) / 2U);
 
     /* Fallback to last stable segment if current detection is weak. */
     if (seg_len < 12) {
