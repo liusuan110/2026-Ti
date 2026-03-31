@@ -35,7 +35,7 @@
 /* ============ ADC 通道定义 ============ */
 #define ADC_CH_UO2      INCH_0      /* P1.0 / A0:  U_o2 正弦波 */
 #define ADC_CH_UO4      INCH_0      /* P1.0 / A0:  U_o4 余弦波(复用) */
-#define ADC_CH_UO3_FFT  INCH_7      /* P1.7 / A7:  U_o3 FFT采样 */
+#define ADC_CH_UO3_FFT  INCH_7      /* P1.7 / A7:  U_o3/U_o5 波形与FFT采样 */
 
 #define ADC_PIN_UO2     BIT0        /* P1.0 */
 #define ADC_PIN_UO4     BIT0        /* P1.0 复用 */
@@ -52,11 +52,10 @@
 /* ============ 页面枚举 ============ */
 typedef enum {
     PAGE_INFO = 0,  /* 任务5: 显示队号姓名 */
-    PAGE_FREQ,      /* 任务6: 方波频率 */
-    PAGE_VPP,       /* 任务7: 正弦波 Vpp/Vrms */
-    PAGE_DUTY,      /* 任务8: 窄脉冲占空比 */
-    PAGE_WAVE,      /* 任务9: 余弦波波形 */
-    PAGE_FFT,       /* 任务10: 窄脉冲频谱 */
+    PAGE_FREQ,      /* Uo1/Uo2: 频率/幅度 */
+    PAGE_WAVE,      /* Uo3/Uo5: 波形 */
+    PAGE_VPP,       /* Uo4: Vpp/Vrms */
+    PAGE_FFT,       /* Uo1: 频谱 */
     PAGE_COUNT
 } PageID;
 
