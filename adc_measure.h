@@ -7,20 +7,16 @@
  * 功能概述:
  *   提供三种 ADC 采样模式, 供不同页面调用:
  *
- *   1. ADC_singleSample()           — 单次采样
- *      用途: 读取单个 ADC 值
- *      调用者: 无 (保留接口)
- *
- *   2. ADC_measureVpp()             — 多窗口鲁棒 Vpp/Vrms
+ *   1. ADC_measureVpp()             — 多窗口鲁棒 Vpp/Vrms
  *      用途: 连续采样并做 Top-K/Bottom-K + 窗口中值聚合
  *      优势: 抑制毛刺点, 高频/低频下稳定性更好
  *      调用者: PAGE_VPP (任务7)
  *
- *   3. ADC_sampleToBuffer()         — 连续采样到数组
+ *   2. ADC_sampleToBuffer()         — 连续采样到数组
  *      用途: 均匀采集 N 个点存入 buffer, 用于 FFT
  *      调用者: PAGE_FFT (任务10)
  *
- *   4. ADC_sampleToBufferAdaptive() — 自适应间隔采样到数组
+ *   3. ADC_sampleToBufferAdaptive() — 自适应间隔采样到数组
  *      用途: 根据信号频率计算采样间隔, 覆盖完整周期
  *      调用者: PAGE_WAVE (任务9) — 过采样后由软件零交叉触发截取
  *
@@ -79,11 +75,5 @@ void ADC_sampleToBuffer(uint16_t channel, int16_t *buf, uint16_t len);
  *       波形稳定由调用方的软件零交叉触发实现 (见 display.c).
  */
 void ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, uint32_t freq_hz);
-
-/*
- * 单次 ADC 采样, 返回 10 位原始值 (0~1023)
- * channel: ADC 通道
- */
-uint16_t ADC_singleSample(uint16_t channel);
 
 #endif /* __ADC_MEASURE_H__ */

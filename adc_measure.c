@@ -41,36 +41,6 @@ void ADC_init(void)
 }
 
 /*
- * 单次 ADC 采样
- * 使用 AVCC (3.3V) 基准, 16 个 ADC10CLK 采样保持
- */
-uint16_t ADC_singleSample(uint16_t channel)
-{
-    /* 关闭 ADC 后再配置 */
-    ADC10CTL0 &= ~ENC;
-
-    /* SREF_0: VR+ = AVCC, VR- = VSS
-     * ADC10SHT_2: 16 x ADC10CLK 采样保持
-     * ADC10ON: 开启 ADC */
-    ADC10CTL0 = SREF_0 | ADC10SHT_2 | ADC10ON;
-
-    /* 选择通道, ADC10DIV_0: 不分频, ADC10SSEL_0: ADC10OSC */
-    ADC10CTL1 = channel | ADC10DIV_0 | ADC10SSEL_0;
-
-    /* 使用 AVCC 无需等待基准建立时间 */
-    /* __delay_cycles(480); */
-
-    /* 启动转换 */
-    ADC10CTL0 |= ENC | ADC10SC;
-
-    /* 等待转换完成 */
-    while (ADC10CTL1 & ADC10BUSY)
-        ;
-
-    return ADC10MEM;
-}
-
-/*
  * 流式采样测 Vpp/Vrms
  * 只保留 max/min, 不需要数组
  */
