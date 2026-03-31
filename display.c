@@ -61,7 +61,6 @@ static void page_freq(void)
 
     if (g_freq_ready) {
         LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
-        LCD_showMeasure(3, 4, " =", g_freq_hz / 100, 1, "kHz");
     } else {
         LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
     }
