@@ -199,7 +199,7 @@ void ADC_sampleToBuffer(uint16_t channel, int16_t *buf, uint16_t len)
     if ((channel == ADC_CH_UO4) && (ADC_PIN_UO4 != ADC_PIN_UO2)) {
         ADC10AE0 |= ADC_PIN_UO4;
         need_restore_uo4 = 1;
-    }
+    }                                                                                                                 
 
     ADC10CTL0 &= ~ENC;
     ADC10CTL0 = SREF_0 | ADC10SHT_0 | ADC10ON;
