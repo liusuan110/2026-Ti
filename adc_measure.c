@@ -10,6 +10,25 @@
 #define VPP_MAX_WINDOWS        5U
 #define VPP_MIN_POINTS_PER_WIN 16U
 #define VPP_TARGET_CYCLES      4UL
+#define ADC_BASE_OVERHEAD_CYC  100UL
+#define ADC_DLY_LOOP_CYC       5UL
+
+static uint16_t vpp_calcDelayLoops(uint32_t freq_hz, uint16_t points_per_window)
+{
+    uint32_t total_cycles_per_period;
+    uint32_t total_window;
+    uint32_t target_interval;
+
+    if (freq_hz == 0U || points_per_window <= 1U) return 0U;
+
+    total_cycles_per_period = SYS_FREQ / freq_hz;
+    total_window = total_cycles_per_period * VPP_TARGET_CYCLES;
+    target_interval = total_window / (uint32_t)(points_per_window - 1U);
+
+    if (target_interval <= ADC_BASE_OVERHEAD_CYC) return 0U;
+
+    return (uint16_t)((target_interval - ADC_BASE_OVERHEAD_CYC) / ADC_DLY_LOOP_CYC);
+}
 
 /* 初始化: 将 ADC 引脚设为模拟输入 */
 void ADC_init(void)
@@ -19,36 +38,6 @@ void ADC_init(void)
 #if (ADC_PIN_UO4 != ADC_PIN_UO2)
     ADC10AE0 &= ~ADC_PIN_UO4;
 #endif
-}
-
-/*
- * 单次 ADC 采样
- * 使用 AVCC (3.3V) 基准, 16 个 ADC10CLK 采样保持
- */
-uint16_t ADC_singleSample(uint16_t channel)
-{
-    /* 关闭 ADC 后再配置 */
-    ADC10CTL0 &= ~ENC;
-
-    /* SREF_0: VR+ = AVCC, VR- = VSS
-     * ADC10SHT_2: 16 x ADC10CLK 采样保持
-     * ADC10ON: 开启 ADC */
-    ADC10CTL0 = SREF_0 | ADC10SHT_2 | ADC10ON;
-
-    /* 选择通道, ADC10DIV_0: 不分频, ADC10SSEL_0: ADC10OSC */
-    ADC10CTL1 = channel | ADC10DIV_0 | ADC10SSEL_0;
-
-    /* 使用 AVCC 无需等待基准建立时间 */
-    /* __delay_cycles(480); */
-
-    /* 启动转换 */
-    ADC10CTL0 |= ENC | ADC10SC;
-
-    /* 等待转换完成 */
-    while (ADC10CTL1 & ADC10BUSY)
-        ;
-
-    return ADC10MEM;
 }
 
 /*
@@ -67,6 +56,7 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
     uint16_t used_windows = 0;
     uint16_t dly_loop_count = 0;
     uint32_t freq_hz_snapshot;
+    uint32_t freq_period_snapshot;
     int32_t diff_mv;
     uint32_t diff_code;
     uint32_t sum_top, sum_bot;
@@ -81,17 +71,14 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
         points_per_window = VPP_MIN_POINTS_PER_WIN;
     }
 
-    /* 与频率关联：按目标覆盖 VPP_TARGET_CYCLES 个周期估算采样间隔 */
-    freq_hz_snapshot = g_freq_hz;
-    if (freq_hz_snapshot > 0U && points_per_window > 1U) {
-        uint32_t total_cycles_per_period = SYS_FREQ / freq_hz_snapshot;
-        uint32_t total_window = total_cycles_per_period * VPP_TARGET_CYCLES;
-        uint32_t target_interval = total_window / (points_per_window - 1U);
-        const uint32_t BASE_OVERHEAD = 100U;
-        if (target_interval > BASE_OVERHEAD) {
-            dly_loop_count = (uint16_t)((target_interval - BASE_OVERHEAD) / 5U);
-        }
+    /* 优先使用周期寄存器快照, 避免频率整数化带来的抖动 */
+    freq_period_snapshot = g_freq_period;
+    if (freq_period_snapshot > 0U) {
+        freq_hz_snapshot = SYS_FREQ / freq_period_snapshot;
+    } else {
+        freq_hz_snapshot = g_freq_hz;
     }
+    dly_loop_count = vpp_calcDelayLoops(freq_hz_snapshot, points_per_window);
 
     /* 配置 ADC: AVCC (3.3V) 基准, 单通道轮询采样 */
     ADC10CTL0 &= ~ENC;
@@ -160,6 +147,18 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
         }
 
         vpp_windows[used_windows++] = (uint16_t)(diff_code * ADC_VREF_MV / 1023U);
+
+        /* 每个窗口结束后重新读取捕获频率, 并做轻量低通减少抖动 */
+        freq_period_snapshot = g_freq_period;
+        if (freq_period_snapshot > 0U) {
+            uint32_t fresh_hz = SYS_FREQ / freq_period_snapshot;
+            if (freq_hz_snapshot == 0U) {
+                freq_hz_snapshot = fresh_hz;
+            } else {
+                freq_hz_snapshot = (freq_hz_snapshot * 3U + fresh_hz) / 4U;
+            }
+            dly_loop_count = vpp_calcDelayLoops(freq_hz_snapshot, points_per_window);
+        }
     }
 
     if (used_windows == 0U) {
@@ -185,6 +184,7 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
 
     /* 对于纯正弦波: Vrms = Vpp / (2 * sqrt(2)) = Vpp * 1000 / 2828 */
     result->vrms_mv = (uint16_t)((uint32_t)diff_mv * 1000 / 2828);
+
 }
 
 /*
