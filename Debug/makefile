@@ -20,6 +20,7 @@ ORDERED_OBJS += \
 "./lcd_draw.obj" \
 "./main.obj" \
 "./timer_capture.obj" \
+"./uart.obj" \
 "../lnk_msp430g2553.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibc.a \
@@ -163,8 +164,8 @@ G2553_JLX12864G_Test.txt: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "Clock.obj" "GPIO.obj" "JLX12864G.obj" "adc_measure.obj" "display.obj" "fft.obj" "key.obj" "lcd_draw.obj" "main.obj" "timer_capture.obj" 
-	-$(RM) "Clock.d" "GPIO.d" "JLX12864G.d" "adc_measure.d" "display.d" "fft.d" "key.d" "lcd_draw.d" "main.d" "timer_capture.d" 
+	-$(RM) "Clock.obj" "GPIO.obj" "JLX12864G.obj" "adc_measure.obj" "display.obj" "fft.obj" "key.obj" "lcd_draw.obj" "main.obj" "timer_capture.obj" "uart.obj" 
+	-$(RM) "Clock.d" "GPIO.d" "JLX12864G.d" "adc_measure.d" "display.d" "fft.d" "key.d" "lcd_draw.d" "main.d" "timer_capture.d" "uart.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 

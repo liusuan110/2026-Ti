@@ -21,6 +21,7 @@
 #include "adc_measure.h"
 #include "timer_capture.h"
 #include "display.h"
+#include "uart.h"
 
 /* ============ Global State ============ */
 static PageID cur_page  = PAGE_INFO;
@@ -96,6 +97,7 @@ int main(void)
     Key_init();                  /* Button P1.3 */
     ADC_init();                  /* ADC pins */
     Capture_init();              /* Timer_A0 capture pins */
+    UART_init();
     Display_init();              /* LCD init + clear */
 
     /* --- Enable global interrupts --- */

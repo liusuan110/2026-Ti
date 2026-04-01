@@ -18,7 +18,8 @@ C_SRCS += \
 ../key.c \
 ../lcd_draw.c \
 ../main.c \
-../timer_capture.c 
+../timer_capture.c \
+../uart.c 
 
 C_DEPS += \
 ./Clock.d \
@@ -30,7 +31,8 @@ C_DEPS += \
 ./key.d \
 ./lcd_draw.d \
 ./main.d \
-./timer_capture.d 
+./timer_capture.d \
+./uart.d 
 
 OBJS += \
 ./Clock.obj \
@@ -42,7 +44,8 @@ OBJS += \
 ./key.obj \
 ./lcd_draw.obj \
 ./main.obj \
-./timer_capture.obj 
+./timer_capture.obj \
+./uart.obj 
 
 OBJS__QUOTED += \
 "Clock.obj" \
@@ -54,7 +57,8 @@ OBJS__QUOTED += \
 "key.obj" \
 "lcd_draw.obj" \
 "main.obj" \
-"timer_capture.obj" 
+"timer_capture.obj" \
+"uart.obj" 
 
 C_DEPS__QUOTED += \
 "Clock.d" \
@@ -66,7 +70,8 @@ C_DEPS__QUOTED += \
 "key.d" \
 "lcd_draw.d" \
 "main.d" \
-"timer_capture.d" 
+"timer_capture.d" \
+"uart.d" 
 
 C_SRCS__QUOTED += \
 "../Clock.c" \
@@ -78,6 +83,7 @@ C_SRCS__QUOTED += \
 "../key.c" \
 "../lcd_draw.c" \
 "../main.c" \
-"../timer_capture.c" 
+"../timer_capture.c" \
+"../uart.c" 
 
 

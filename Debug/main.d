@@ -22,6 +22,7 @@ main.obj: ../key.h
 main.obj: ../adc_measure.h
 main.obj: ../timer_capture.h
 main.obj: ../display.h
+main.obj: ../uart.h
 
 ../main.c:
 
@@ -66,4 +67,6 @@ C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include/intrinsics_leg
 ../timer_capture.h:
 
 ../display.h:
+
+../uart.h:
 

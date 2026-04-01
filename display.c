@@ -9,6 +9,7 @@
 #include "adc_measure.h"
 #include "timer_capture.h"
 #include "fft.h"
+#include "uart.h"
 
 /* Page titles (top area, page 0~1). */
 static const char * const page_titles[PAGE_COUNT] = {
@@ -115,12 +116,18 @@ static void page_freq(void)
     clear_text_band(2);
     if (g_freq_ready) {
         LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
+        UART_sendStr("--- Uo1/Uo2 Test ---\r\nSignal: Sine & Square\r\nFreq (Uo1): ");
+        UART_sendNum(g_freq_hz);
+        UART_sendStr(" Hz\r\n");
     } else {
         LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
     }
 
     clear_text_band(5);
     LCD_showMeasure(5, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
+    UART_sendStr("Amplitude (Uo2): ");
+    UART_sendNum(result.vpp_mv);
+    UART_sendStr(" mV\r\n\r\n");
 }
 
 /* Task 8: Vpp / Vrms page (Uo4). */
@@ -141,9 +148,15 @@ static void page_vpp(void)
     if (vpp_sub_mode == 0) {
         LCD_showMeasure(2, 4, "Vpp=", (uint32_t)result.vpp_mv, 0, "mV");
         LCD_showMeasure(4, 4, "   =", (uint32_t)result.vpp_mv, 3, "V");
+        UART_sendStr("--- Uo4 Test ---\r\nSignal: Cosine\r\nMode: Vpp\r\nVpp: ");
+        UART_sendNum(result.vpp_mv);
+        UART_sendStr(" mV\r\n\r\n");
     } else {
         LCD_showMeasure(2, 4, "Vrms=", (uint32_t)result.vrms_mv, 0, "mV");
         LCD_showMeasure(4, 4, "    =", (uint32_t)result.vrms_mv, 3, "V");
+        UART_sendStr("--- Uo4 Test ---\r\nSignal: Cosine\r\nMode: Vrms\r\nVrms: ");
+        UART_sendNum(result.vrms_mv);
+        UART_sendStr(" mV\r\n\r\n");
     }
 
     clear_text_band(6);
@@ -401,6 +414,17 @@ static void page_fft(void)
     bar_data[0] = 0;
 
     LCD_drawBars(&bar_data[1], FFT_N / 2 - 1, 6, 2, 4);
+
+    /* 每隔一段时间通过串口输出最高频带位置信息 */
+    {
+        static uint8_t fft_uart_div = 0;
+        if (++fft_uart_div > 3) {
+            fft_uart_div = 0;
+            UART_sendStr("--- FFT Uo1 Test ---\r\nMax Mag Band: ");
+            UART_sendNum(mag_max_disp);
+            UART_sendStr("\r\n\r\n");
+        }
+    }
 }
 
 void Display_toggleSubMode(PageID page_id)
