@@ -322,9 +322,13 @@ static void page_fft(void)
     int16_t *real_buf = g_buf_a;
     int16_t *imag_buf = g_buf_b;
     uint16_t mag_buf[FFT_N / 2];
+    static uint16_t mag_smooth[FFT_N / 2];
+    static uint16_t max_smooth = 1;
+    static uint8_t fft_inited = 0;
     u8 bar_data[FFT_N / 2];
     uint16_t i;
-    uint16_t mag_max = 0;
+    uint16_t mag_max_raw = 0;
+    uint16_t mag_max_disp;
 
     draw_title(PAGE_FFT);
 
@@ -349,15 +353,47 @@ static void page_fft(void)
     fft32(real_buf, imag_buf);
     fft_magnitude(real_buf, imag_buf, mag_buf);
 
-    for (i = 1; i < FFT_N / 2; i++) {
-        if (mag_buf[i] > mag_max) mag_max = mag_buf[i];
+    if (!fft_inited) {
+        for (i = 0; i < FFT_N / 2; i++) {
+            mag_smooth[i] = mag_buf[i];
+        }
+        fft_inited = 1;
     }
-    if (mag_max == 0) mag_max = 1;
 
-    bar_data[0] = 0;
+    /* 对每个频点做时域平滑: 上升快, 下降慢, 降低“上下抖动” */
     for (i = 1; i < FFT_N / 2; i++) {
-        bar_data[i] = (u8)((uint32_t)mag_buf[i] * 47 / mag_max);
+        uint16_t cur = mag_buf[i];
+        uint16_t prev = mag_smooth[i];
+        uint16_t smooth;
+
+        if (cur >= prev) {
+            smooth = (uint16_t)(((uint32_t)prev * 1U + (uint32_t)cur * 3U + 2U) / 4U);
+        } else {
+            smooth = (uint16_t)(((uint32_t)prev * 7U + (uint32_t)cur + 4U) / 8U);
+        }
+        mag_smooth[i] = smooth;
+
+        if (smooth > mag_max_raw) mag_max_raw = smooth;
     }
+
+    if (mag_max_raw == 0) mag_max_raw = 1;
+
+    /* 峰值归一化基准也做平滑, 减少“最高柱变化导致其他柱联动跳动” */
+    if (mag_max_raw > max_smooth) {
+        max_smooth = (uint16_t)(((uint32_t)max_smooth * 1U + (uint32_t)mag_max_raw * 3U + 2U) / 4U);
+    } else {
+        max_smooth = (uint16_t)(((uint32_t)max_smooth * 15U + (uint32_t)mag_max_raw + 8U) / 16U);
+    }
+    if (max_smooth == 0) max_smooth = 1;
+    mag_max_disp = max_smooth;
+
+    for (i = 1; i < FFT_N / 2; i++) {
+        uint16_t noise_th = (uint16_t)(mag_max_disp / 24U); /* 约 4% 噪声门限 */
+        uint16_t v = mag_smooth[i];
+        if (v < noise_th) v = 0;
+        bar_data[i] = (u8)((uint32_t)v * 47U / mag_max_disp);
+    }
+    bar_data[0] = 0;
 
     LCD_drawBars(&bar_data[1], FFT_N / 2 - 1, 6, 2, 4);
 }
