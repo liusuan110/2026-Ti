@@ -41,8 +41,43 @@ static void clear_text_band(u8 page_start)
     }
 }
 
-/* Freq page sub-mode */
-static uint8_t freq_sub_mode = 0; /* 0=Freq+Amp, 1=Amp only/Freq only */
+/*
+ * 在采样数据中估计“每周期样本点数”(spp)：
+ * - 使用归一化前的自相关近似(去均值后点积)
+ * - 仅搜索有效范围 [3, len/3]，避免过短/过长周期误判
+ */
+static uint16_t wave_estimate_spp(const int16_t *raw, uint16_t len)
+{
+    uint16_t lag;
+    uint16_t best_lag = 0;
+    int32_t sum = 0;
+    int16_t mean;
+    int32_t best_score = 0;
+
+    if (len < 12) return 0;
+
+    for (lag = 0; lag < len; lag++) {
+        sum += raw[lag];
+    }
+    mean = (int16_t)(sum / (int32_t)len);
+
+    for (lag = 3; lag <= (uint16_t)(len / 3); lag++) {
+        uint16_t i;
+        int32_t score = 0;
+        for (i = 0; i + lag < len; i++) {
+            int16_t a = (int16_t)(raw[i] - mean);
+            int16_t b = (int16_t)(raw[i + lag] - mean);
+            score += (int32_t)a * (int32_t)b;
+        }
+
+        if (score > best_score) {
+            best_score = score;
+            best_lag = lag;
+        }
+    }
+
+    return best_lag;
+}
 
 static void draw_title(PageID page_id)
 {
@@ -78,21 +113,14 @@ static void page_freq(void)
     ADC_measureVpp(ADC_CH_UO2, 300, &result);
 
     clear_text_band(2);
-    clear_text_band(4);
-    clear_text_band(6);
-    
-    if (freq_sub_mode == 0) {
-        if (g_freq_ready) {
-            /* 显示为 kHz，保留一位小数，即除以 100 并设置 decimal=1 */
-            LCD_showMeasure(2, 4, "f=", g_freq_hz / 100, 1, "kHz");
-        } else {
-            LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
-        }
-        LCD_showGB2312Str(6, 0, (u8 *)"DBL KEY1: freq/amp");
+    if (g_freq_ready) {
+        LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
     } else {
-        LCD_showMeasure(4, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
-        LCD_showGB2312Str(6, 0, (u8 *)"DBL KEY1: amp/freq");
+        LCD_showGB2312Str(2, 16, (u8 *)"Measuring f...");
     }
+
+    clear_text_band(5);
+    LCD_showMeasure(5, 4, "A=", (uint32_t)result.vpp_mv, 0, "mV");
 }
 
 /* Task 8: Vpp / Vrms page (Uo4). */
@@ -125,18 +153,172 @@ static void page_vpp(void)
 /* Task 7: simplest waveform display (Uo3/Uo5). */
 static void page_wave(void)
 {
-    uint8_t page_changed = (last_title_page != PAGE_WAVE);
+    int16_t *raw = g_buf_a;
+    uint16_t i;
+    int16_t adc_min = 1023;
+    int16_t adc_max = 0;
+    int16_t span, pad;
+    int16_t map_min, map_max;
+    int16_t raw_map_min, raw_map_max;
+    uint16_t spp = 0;
+    uint16_t display_spp;
+    uint16_t seg_start = 0;
+    uint16_t seg_len = WAVE_RAW_POINTS;
+    uint16_t seg_end;
+    uint16_t seg_min = 1023;
+    uint16_t seg_max = 0;
+    uint16_t idx;
+    uint16_t idx_prev, idx_next;
+    int32_t val;
+    int32_t y_norm;
+    u8 y_pixel;
+    const u8 y_bottom = 63;
+    const u8 usable_h = (u8)(63 - 16 + 1);
+    const u8 x_step = 1;
+    uint32_t freq_hint = 25000U; /* 20~30kHz 显示默认中心频率 */
+
+    /* Frame-to-frame stabilizers */
+    static uint8_t seg_inited = 0;
+    static uint16_t last_seg_start = 0;
+    static uint16_t last_seg_len = 40;
+    static uint8_t scale_inited = 0;
+    static int16_t smooth_map_min = 0;
+    static int16_t smooth_map_max = 1023;
 
     draw_title(PAGE_WAVE);
 
-    if (page_changed) {
-        LCD_clearPages(2, 7);
+    /* 20~30kHz 正弦波显示:
+     * 1) 优先使用捕获频率提示
+     * 2) 频率异常时回退到 25kHz
+     * 3) 使用自适应采样让窗口稳定覆盖固定周期数
+     */
+    if (g_freq_period > 0U) {
+        freq_hint = SYS_FREQ / g_freq_period;
+    } else if (g_freq_hz > 0U) {
+        freq_hint = g_freq_hz;
+    }
+    if (freq_hint < 20000U || freq_hint > 30000U) {
+        freq_hint = 25000U;
+    }
+    ADC_sampleToBufferAdaptive(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS, freq_hint);
+
+    /* Global min/max. */
+    for (i = 0; i < WAVE_RAW_POINTS; i++) {
+        if (raw[i] > adc_max) adc_max = raw[i];
+        if (raw[i] < adc_min) adc_min = raw[i];
+    }
+    if (adc_max <= adc_min) adc_max = adc_min + 1;
+
+    /* 周期估计 + 固定 2 周期显示，减少高频/欠采样下的触发抖动 */
+    spp = wave_estimate_spp(raw, WAVE_RAW_POINTS);
+    if (spp < 4) {
+        if (seg_inited) {
+            spp = (uint16_t)(last_seg_len / 2U);
+        } else {
+            spp = 6;
+        }
+    }
+    display_spp = spp;
+    if (display_spp < 4) display_spp = 4;
+    if (display_spp > 20U) display_spp = 20U;
+    if (display_spp > (WAVE_RAW_POINTS / 2U)) display_spp = (WAVE_RAW_POINTS / 2U);
+
+    seg_len = (uint16_t)(display_spp * 2U);
+    if (seg_len > WAVE_RAW_POINTS) seg_len = WAVE_RAW_POINTS;
+    seg_start = (uint16_t)((WAVE_RAW_POINTS - seg_len) / 2U);
+
+    /* Fallback to last stable segment if current detection is weak. */
+    if (seg_len < 12) {
+        if (seg_inited) {
+            seg_start = last_seg_start;
+            seg_len = last_seg_len;
+        } else {
+            seg_start = 0;
+            seg_len = WAVE_RAW_POINTS;
+        }
+    }
+    if (seg_len > WAVE_RAW_POINTS) seg_len = WAVE_RAW_POINTS;
+    if ((uint16_t)(seg_start + seg_len) > WAVE_RAW_POINTS) {
+        seg_start = (uint16_t)(WAVE_RAW_POINTS - seg_len);
     }
 
-    clear_text_band(3);
-    clear_text_band(5);
-    LCD_showGB2312Str(3, 8, (u8 *)"Wave Disabled");
-    LCD_showGB2312Str(5, 0, (u8 *)"Keep this page only");
+    /* Smooth segment position/length to reduce horizontal jitter. */
+    if (!seg_inited) {
+        last_seg_start = seg_start;
+        last_seg_len = seg_len;
+        seg_inited = 1;
+    } else {
+        last_seg_start = (uint16_t)(((uint32_t)last_seg_start * 7U + (uint32_t)seg_start * 3U + 5U) / 10U);
+        last_seg_len = (uint16_t)(((uint32_t)last_seg_len * 7U + (uint32_t)seg_len * 3U + 5U) / 10U);
+        if (last_seg_len < 12) last_seg_len = 12;
+        if (last_seg_len > WAVE_RAW_POINTS) last_seg_len = WAVE_RAW_POINTS;
+        if ((uint16_t)(last_seg_start + last_seg_len) > WAVE_RAW_POINTS) {
+            last_seg_start = (uint16_t)(WAVE_RAW_POINTS - last_seg_len);
+        }
+        seg_start = last_seg_start;
+        seg_len = last_seg_len;
+    }
+    seg_end = (uint16_t)(seg_start + seg_len - 1);
+
+    /* Vertical mapping based on selected segment + frame smoothing. */
+    seg_min = 1023;
+    seg_max = 0;
+    for (i = seg_start; i <= seg_end; i++) {
+        if (raw[i] > seg_max) seg_max = raw[i];
+        if (raw[i] < seg_min) seg_min = raw[i];
+    }
+
+    span = (int16_t)(seg_max - seg_min);
+    if (span < 1) span = 1;
+    pad = (int16_t)(span / 8);
+    if (pad < 4) pad = 4;
+
+    raw_map_min = (int16_t)(seg_min - pad);
+    raw_map_max = (int16_t)(seg_max + pad);
+    if (raw_map_min < 0) raw_map_min = 0;
+    if (raw_map_max > 1023) raw_map_max = 1023;
+    if (raw_map_max <= raw_map_min + 16) raw_map_max = (int16_t)(raw_map_min + 16);
+    if (raw_map_max > 1023) {
+        raw_map_max = 1023;
+        raw_map_min = (int16_t)(raw_map_max - 16);
+    }
+
+    if (!scale_inited) {
+        smooth_map_min = raw_map_min;
+        smooth_map_max = raw_map_max;
+        scale_inited = 1;
+    } else {
+        smooth_map_min = (int16_t)(((int32_t)smooth_map_min * 8 + (int32_t)raw_map_min * 2 + 5) / 10);
+        smooth_map_max = (int16_t)(((int32_t)smooth_map_max * 8 + (int32_t)raw_map_max * 2 + 5) / 10);
+        if (smooth_map_max <= smooth_map_min + 16) smooth_map_max = (int16_t)(smooth_map_min + 16);
+        if (smooth_map_max > 1023) {
+            smooth_map_max = 1023;
+            smooth_map_min = (int16_t)(smooth_map_max - 16);
+        }
+        if (smooth_map_min < 0) smooth_map_min = 0;
+    }
+
+    map_min = smooth_map_min;
+    map_max = smooth_map_max;
+
+    LCD_clearPages(2, 7);
+
+    /* Dot-style waveform: 2-cycle segment stretched to 128 columns. */
+    for (i = 0; i < 128; i += x_step) {
+        idx = (uint16_t)(seg_start + ((uint32_t)i * (seg_len - 1) / 127U));
+        idx_prev = (idx > seg_start) ? (uint16_t)(idx - 1) : idx;
+        idx_next = (idx < seg_end) ? (uint16_t)(idx + 1) : idx;
+
+        /* Light local smoothing only for display aesthetics. */
+        val = ((int32_t)raw[idx_prev] + ((int32_t)raw[idx] << 1) + (int32_t)raw[idx_next] + 2) / 4;
+
+        y_norm = (val - map_min) * (usable_h - 1) / (map_max - map_min);
+        if (y_norm < 0) y_norm = 0;
+        if (y_norm > (usable_h - 1)) y_norm = (usable_h - 1);
+
+        y_pixel = (u8)(y_bottom - (u8)y_norm);
+        LCD_drawDot((u8)i, y_pixel);
+    }
 }
 
 /* Task 9: FFT page. */
@@ -225,8 +407,6 @@ void Display_toggleSubMode(PageID page_id)
 {
     if (page_id == PAGE_VPP) {
         vpp_sub_mode ^= 1;
-    } else if (page_id == PAGE_FREQ) {
-        freq_sub_mode ^= 1;
     }
 }
 
