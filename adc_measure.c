@@ -6,7 +6,8 @@
 #include "adc_measure.h"
 #include "timer_capture.h"
 
-#define VPP_TOPK               3U
+#define VPP_TOPK               10U
+#define VPP_DISCARD            4U
 #define VPP_MAX_WINDOWS        5U
 #define VPP_MIN_POINTS_PER_WIN 16U
 #define VPP_TARGET_CYCLES      4UL
@@ -48,8 +49,6 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
 {
     uint16_t i, w;
     uint16_t val;
-    uint16_t topk[VPP_TOPK];
-    uint16_t botk[VPP_TOPK];
     uint16_t vpp_windows[VPP_MAX_WINDOWS];
     uint16_t window_count;
     uint16_t points_per_window;
@@ -59,7 +58,6 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
     uint32_t freq_period_snapshot;
     int32_t diff_mv;
     uint32_t diff_code;
-    uint32_t sum_top, sum_bot;
 
     if (result == 0) return;
     if (count < VPP_MIN_POINTS_PER_WIN) count = VPP_MIN_POINTS_PER_WIN;
@@ -86,14 +84,17 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
     ADC10CTL1 = channel | ADC10DIV_0 | ADC10SSEL_0;
 
     for (w = 0; w < window_count; w++) {
-        for (i = 0; i < VPP_TOPK; i++) {
-            topk[i] = 0;
-            botk[i] = 1023;
+        /* 使用基于 32 个直方图 Bin 的统计法过滤方波尖刺 */
+        uint8_t hist[32];
+        uint16_t rem_sum[32];
+        for (i = 0; i < 32; i++) {
+            hist[i] = 0;
+            rem_sum[i] = 0;
         }
 
         for (i = 0; i < points_per_window; i++) {
-            uint16_t k;
             uint16_t dly;
+            uint8_t bin;
 
             ADC10CTL0 |= ENC | ADC10SC;
             while (ADC10CTL1 & ADC10BUSY)
@@ -101,29 +102,9 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
             val = ADC10MEM;
             ADC10CTL0 &= ~ENC;
 
-            /* Top-K */
-            for (k = 0; k < VPP_TOPK; k++) {
-                if (val > topk[k]) {
-                    uint16_t t;
-                    for (t = (uint16_t)(VPP_TOPK - 1U); t > k; t--) {
-                        topk[t] = topk[t - 1U];
-                    }
-                    topk[k] = val;
-                    break;
-                }
-            }
-
-            /* Bottom-K */
-            for (k = 0; k < VPP_TOPK; k++) {
-                if (val < botk[k]) {
-                    uint16_t t;
-                    for (t = (uint16_t)(VPP_TOPK - 1U); t > k; t--) {
-                        botk[t] = botk[t - 1U];
-                    }
-                    botk[k] = val;
-                    break;
-                }
-            }
+            bin = (uint8_t)(val >> 5); /* 分成32段 */
+            hist[bin]++;
+            rem_sum[bin] += (val & 0x1F); /* 记录段内尾数求精准平均 */
 
             if (dly_loop_count > 0U && (i + 1U < points_per_window)) {
                 dly = dly_loop_count;
@@ -133,17 +114,31 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
             }
         }
 
-        sum_top = 0;
-        sum_bot = 0;
-        for (i = 0; i < VPP_TOPK; i++) {
-            sum_top += topk[i];
-            sum_bot += botk[i];
-        }
+        /* 寻找众数以过滤过冲：从两端寻找点数大于阈值的直方图区 */
+        {
+            uint8_t threshold = (uint8_t)(points_per_window / 12U); 
+            int8_t top_bin = 31;
+            int8_t bot_bin = 0;
 
-        if (sum_top > sum_bot) {
-            diff_code = (sum_top - sum_bot) / VPP_TOPK;
-        } else {
-            diff_code = 0;
+            if (threshold < 2) threshold = 2;
+
+            while (top_bin >= 0 && hist[top_bin] < threshold) {
+                top_bin--;
+            }
+
+            while (bot_bin <= 31 && hist[bot_bin] < threshold) {
+                bot_bin++;
+            }
+
+            if (top_bin >= bot_bin && top_bin >= 0 && bot_bin <= 31) {
+                uint16_t top_val = (top_bin << 5) + (rem_sum[top_bin] / hist[top_bin]);
+                uint16_t bot_val = (bot_bin << 5) + (rem_sum[bot_bin] / hist[bot_bin]);
+                diff_code = top_val - bot_val;
+                /* 由于方波顶端有小斜率，众数段可能不在最顶点，补偿3% */
+                diff_code = (diff_code * 103U) / 100U;
+            } else {
+                diff_code = 0;
+            }
         }
 
         vpp_windows[used_windows++] = (uint16_t)(diff_code * ADC_VREF_MV / 1023U);
@@ -180,6 +175,12 @@ void ADC_measureVpp(uint16_t channel, uint16_t count, VppResult *result)
     }
 
     diff_mv = vpp_windows[used_windows / 2U];
+    
+    /* 硬件存在 ~250mV 偏差，加入补偿值。避免零输入时空跳变 */
+    if (diff_mv > 100) {
+        diff_mv += 250;
+    }
+
     result->vpp_mv = (uint16_t)diff_mv;
 
     /* 对于纯正弦波: Vrms = Vpp / (2 * sqrt(2)) = Vpp * 1000 / 2828 */
@@ -245,13 +246,15 @@ void ADC_sampleToBuffer(uint16_t channel, int16_t *buf, uint16_t len)
  *     (推荐使用软件零交叉触发, 见 display.c 中的 page_wave())
  *   - 采样使用内部 2.5V 基准, ADC10SHT_0 (4 个 ADC10CLK 采样保持)
  */
-void ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, uint32_t freq_hz)
+uint32_t ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, uint32_t freq_hz)
 {
     uint16_t i;
     uint8_t need_restore_uo4 = 0;
     uint16_t dly_loop_count = 0;   /* 每两个采样之间的软件空循环次数 */
+    uint32_t actual_interval = 90; 
+    uint16_t t_start, t_end;
 
-    if (len == 0) return;
+    if (len == 0) return actual_interval;
 
     /* --- 如果 U_o4 使用独立引脚, 临时开启其模拟功能 --- */
     if ((channel == ADC_CH_UO4) && (ADC_PIN_UO4 != ADC_PIN_UO2)) {
@@ -261,52 +264,24 @@ void ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, ui
 
     /* --- 根据信号频率计算采样间隔延时 --- */
     if (freq_hz > 0 && len > 1) {
-        /*
-         * 目标: 让 len 个采样点的总时间窗口覆盖 WAVE_DISPLAY_CYCLES 个信号周期.
-         * 这样屏幕上显示的波形周期数 = WAVE_DISPLAY_CYCLES (可在 config.h 调节).
-         *
-         * 计算:
-         *   total_window = WAVE_DISPLAY_CYCLES 个周期的 CPU 时钟数
-         *   target_interval = total_window / (len - 1)
-         *
-         * 高频时 (如 20kHz):
-         *   1 周期 = 16000000/20000 = 800 cycles
-         *   2 周期的窗口 = 1600 cycles
-         *   target_interval = 1600 / 95 ≈ 16 cycles
-         *   16 < BASE_OVERHEAD(100), 所以 dly_loop_count = 0
-         *   → ADC 以最快速度连续采样, 硬件自然限制了采样率
-         *   → 实际采样窗口由 ADC 转换时间决定, 约覆盖 2~3 个周期
-         *
-         * 低频时 (如 1kHz):
-         *   1 周期 = 16000 cycles
-         *   2 周期 = 32000 cycles
-         *   target_interval = 32000 / 95 ≈ 336 cycles
-         *   dly_loop_count = (336 - 100) / 5 ≈ 47
-         *   → 通过软件延时拉长采样间隔, 精确覆盖 2 个周期
-         */
         uint32_t total_cycles_per_period = SYS_FREQ / freq_hz;
         uint32_t total_window = total_cycles_per_period * WAVE_DISPLAY_CYCLES;
         uint32_t target_interval = total_window / (len - 1);
-        const uint32_t BASE_OVERHEAD = 100; /* ADC 每次转换的固有 CPU 开销 */
+        const uint32_t BASE_OVERHEAD = 90; /* ADC 每次转换的固有 CPU 开销修正为 90 */
 
         if (target_interval > BASE_OVERHEAD) {
             dly_loop_count = (target_interval - BASE_OVERHEAD) / 5;
         }
-        /* 否则 dly_loop_count 保持 0: ADC 以最快速度连续采, 不插入额外延时 */
     }
 
     /* --- 配置 ADC10 硬件 --- */
     ADC10CTL0 &= ~ENC;  /* 关闭使能, 允许修改控制寄存器 */
     ADC10CTL0 = SREF_0 | ADC10SHT_0 | ADC10ON;
-    /*         SREF_0:   VR+ = AVCC (3.3V), VR- = VSS
-     *         ADC10SHT_0: 4 个 ADC10CLK 采样保持 (快速采样)
-     */
     ADC10CTL1 = channel | ADC10DIV_0 | ADC10SSEL_0;
-    /*         ADC10DIV_0:  ADC 时钟不分频
-     *         ADC10SSEL_0: ADC10OSC (~5MHz) */
-    /* __delay_cycles(480); */ /* 使用 AVCC 无需等待基准稳定 */
 
     /* --- 连续采集 len 个点 --- */
+    t_start = TA0R; /* 记录定时器起始时刻，这需要保证TA0是连续模式运行的(如本工程中的实现) */
+    
     for (i = 0; i < len; i++) {
         ADC10CTL0 |= ENC | ADC10SC; /* 启动单次转换 */
         while (ADC10CTL1 & ADC10BUSY)
@@ -322,9 +297,22 @@ void ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, ui
             }
         }
     }
+    
+    t_end = TA0R;
+    
+    if (dly_loop_count == 0) {
+        /* 高频时因为没进延时函数，难以直接预估循环时间，靠截取硬件连续计数的Timer直接算出实际采样平均时间 */
+        uint16_t diff = t_end - t_start;
+        actual_interval = (uint32_t)diff / len;
+    } else {
+        /* 低频时由于主导的软件延时特别长，不用依靠时间戳来推算，而直接根据精确的已知延时时间决定，防16位定时器溢出反绕 */
+        actual_interval = 90 + dly_loop_count * 5;
+    }
 
     /* --- 恢复引脚配置 --- */
     if (need_restore_uo4) {
         ADC10AE0 &= ~ADC_PIN_UO4;
     }
+    
+    return actual_interval;
 }

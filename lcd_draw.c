@@ -85,7 +85,7 @@ void LCD_drawDot(u8 x, u8 y)
  */
 void LCD_drawBars(const u8 mag[], u8 count, u8 bar_w, u8 gap, u8 x_offset)
 {
-    u8 x;
+    u8 p, x;
     u8 i = 0;
     u8 in_bar_col = 0;
     u8 group_pos = 0;
@@ -95,48 +95,40 @@ void LCD_drawBars(const u8 mag[], u8 count, u8 bar_w, u8 gap, u8 x_offset)
     if (bar_w == 0) return;
     group_w = bar_w + gap;
 
-    /* 逐列直接覆盖写入 page2~7, 避免“先清空后重画”导致的可见闪烁 */
-    for (x = 0; x < 128; x++) {
-        u8 p;
-        u8 data;
-        u8 y_top = 64;
+    /* 按页遍历，利用自动列递增机制，将 768 次坐标设置减少为 6 次 */
+    for (p = 2; p <= 7; p++) {
+        u8 page_y_start = (u8)(p << 3);
+        
+        LCD_setAddr(p, 0);
 
-        if (x >= x_offset && count > 0) {
-            uint16_t rel = (uint16_t)(x - x_offset);
-            i = (u8)(rel / group_w);
-            group_pos = (u8)(rel % group_w);
+        for (x = 0; x < 128; x++) {
+            u8 data = 0x00;
+            u8 y_top = 64;
 
-            if (i < count && group_pos < bar_w) {
-                in_bar_col = 1;
-                bar_height = mag[i];
-                if (bar_height > 47) bar_height = 47;
-                if (bar_height > 0) {
-                    y_top = (u8)(16 + (47 - bar_height));
+            if (x >= x_offset && count > 0) {
+                uint16_t rel = (uint16_t)(x - x_offset);
+                i = (u8)(rel / group_w);
+                group_pos = (u8)(rel % group_w);
+
+                if (i < count && group_pos < bar_w) {
+                    in_bar_col = 1;
+                    bar_height = mag[i];
+                    if (bar_height > 47) bar_height = 47;
+                    if (bar_height > 0) {
+                        y_top = (u8)(16 + (47 - bar_height));
+                    }
+                } else {
+                    in_bar_col = 0;
                 }
             } else {
                 in_bar_col = 0;
             }
-        } else {
-            in_bar_col = 0;
-        }
 
-        for (p = 2; p <= 7; p++) {
-            u8 page_y_start = (u8)(p << 3);
-            u8 page_y_end = (u8)(page_y_start + 7);
-
-            data = 0x00;
-            if (in_bar_col && bar_height > 0 && y_top <= page_y_end) {
+            if (in_bar_col && bar_height > 0 && y_top <= (page_y_start + 7)) {
                 u8 ys = (y_top > page_y_start) ? y_top : page_y_start;
-                u8 ye = 63;
-                u8 y;
-                if (ye > page_y_end) ye = page_y_end;
-
-                for (y = ys; y <= ye; y++) {
-                    data |= (u8)(1U << (y - page_y_start));
-                }
+                data = (u8)(0xFF << (ys - page_y_start));
             }
 
-            LCD_setAddr(p, x);
             LCD_writeData(data);
         }
     }

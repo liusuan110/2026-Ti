@@ -71,9 +71,8 @@ void ADC_sampleToBuffer(uint16_t channel, int16_t *buf, uint16_t len);
  * len:      采样点数 (波形显示时传 WAVE_RAW_POINTS=96)
  * freq_hz:  信号频率 (Hz), 若传 0 则不插入延时
  *
- * 注意: 本函数只负责采样, 不做触发同步.
- *       波形稳定由调用方的软件零交叉触发实现 (见 display.c).
+ * 返回值:   实际测量到的采集每次间隔(CPU tick)
  */
-void ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, uint32_t freq_hz);
+uint32_t ADC_sampleToBufferAdaptive(uint16_t channel, int16_t *buf, uint16_t len, uint32_t freq_hz);
 
 #endif /* __ADC_MEASURE_H__ */

@@ -51,13 +51,15 @@ static void page_leave(PageID page_id)
 {
     switch (page_id) {
     case PAGE_FREQ:
+    case PAGE_VPP:
+    case PAGE_WAVE:
+    case PAGE_FFT:
         Capture_stopFreq();
         break;
     default:
-        /* VPP/WAVE/FFT pages use ADC single-shot, no stop needed */
         break;
     }
-    Capture_stopAll(); /* Safety: ensure Timer is stopped */
+    //Capture_stopAll(); /* Remove safety stop to let timer run for ADC delays if needed */
 }
 
 /* Enter new page: start corresponding peripherals */
@@ -65,6 +67,9 @@ static void page_enter(PageID page_id)
 {
     switch (page_id) {
     case PAGE_FREQ:
+    case PAGE_VPP:
+    case PAGE_WAVE:
+    case PAGE_FFT:
         Capture_startFreq();
         break;
     default:
@@ -139,8 +144,16 @@ int main(void)
         /* Unified tick-based refresh with rate limiting */
         refresh_tick++;
 
+        /* 频率测量：将32位除法丢到主循环，空闲时才执行，解决中断耗时过载问题 */
+        if (g_freq_ready && g_freq_period > 0) {
+            g_freq_hz = SYS_FREQ / (uint32_t)g_freq_period;
+        }
+
         if (need_refresh) {
             Display_refresh(cur_page);
+            if (cur_page != PAGE_INFO) {
+                Capture_startFreq();
+            }
             need_refresh = 0;
             refresh_tick = 0;
         } else {
@@ -148,7 +161,7 @@ int main(void)
 
             switch (cur_page) {
             case PAGE_FREQ:
-                if (g_freq_ready && refresh_tick >= 10) { /* ~200ms */
+                if ((g_freq_ready || refresh_tick >= 25) && refresh_tick >= 10) { /* ~200ms normal, ~500ms timeout */
                     do_refresh = 1;
                 }
                 break;
@@ -165,6 +178,9 @@ int main(void)
 
             if (do_refresh) {
                 Display_refresh(cur_page);
+                if (cur_page != PAGE_INFO) {
+                    Capture_startFreq();
+                }
                 refresh_tick = 0;
             }
         }
