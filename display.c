@@ -15,7 +15,7 @@
 static const char * const page_titles[PAGE_COUNT] = {
     "  Team Info  ",   /* PAGE_INFO */
     " Uo1/Uo2 F/A ",   /* PAGE_FREQ */
-    " Uo3/Uo5 Wave",   /* PAGE_WAVE */
+    "   Uo3 Wave  ",   /* PAGE_WAVE */
     " Vpp  (U_o4) ",   /* PAGE_VPP  */
     " FFT  (U_o1) "    /* PAGE_FFT  */
 };
@@ -135,7 +135,7 @@ static void page_wave(void)
     int32_t sum = 0;
     int16_t dc_mean;
     uint16_t trigger_idx = 0;
-    uint32_t freq_hint = 25000U;
+    uint32_t freq_hint = 8000U;
     uint32_t sample_interval = 90U;
     uint16_t spp_from_timing = 0;
     int16_t adc_min = 1023;
@@ -164,8 +164,8 @@ static void page_wave(void)
     } else if (g_freq_hz > 0U) {
         freq_hint = g_freq_hz;
     }
-    if (freq_hint < 20000U || freq_hint > 30000U) {
-        freq_hint = 25000U;
+    if (freq_hint < 5000U || freq_hint > 10000U) {
+        freq_hint = 8000U;
     }
 
     sample_interval = ADC_sampleToBufferAdaptive(ADC_CH_WAVE_VIEW, wave_buf, max_points, freq_hint);
