@@ -6,21 +6,24 @@
  * =============================================
  * 引脚分配总表 (MSP430G2553 DIP-20):
  *
- *  P1.0 (A0)      -> ADC: U_o2 正弦波 / U_o4 余弦波 (按页面复用)
+ *  P1.0 (A0)      -> ADC: U_o2 方波测量 / U_o4 Vpp-Vrms 测量 (按页面复用)
  *  P1.1 (TA0.0)   -> 捕获: U_o1 方波 (频率测量 + 波形同步触发)
  *  P1.2 (TXD)     -> 串口: UART 发送测试数据到 PC 通信端
  *  P1.3            -> 按键 KEY1 (上拉输入, 单键)
  *  P1.4            -> LCD SCLK    (已占用)
  *  P1.5            -> LCD SDA     (已占用)
  *  P1.6            -> LCD ROM_CS  (已占用)
- *  P1.7 (A7)      -> ADC: U_o3 窄脉冲 (FFT采样, 避免与捕获模式冲突)
+ *  P1.7 (A7)      -> ADC: U_o3 波形显示 / U_o1 频谱采样
  *  P2.0            -> LCD RS      (已占用)
  *  P2.1            -> LCD RST     (已占用)
  *  P2.2            -> LCD CS      (已占用)
  *  P2.3            -> LCD ROM_IN  (已占用)
  *  P2.4            -> LCD ROM_OUT (已占用)
  *  P2.5            -> LCD ROM_SCK (已占用)
- *  说明: U_o2 与 U_o4 共享 P1.0(A0), 由状态机按当前页面选择测量功能
+ *  说明:
+ *    - 波形页仅显示 U_o3
+ *    - 频谱页用于 U_o1 频谱显示（采样通道为 P1.7/A7）
+ *    - U_o2 与 U_o4 共享 P1.0(A0), 由状态机按当前页面选择测量功能
  */
 
 #ifndef __CONFIG_H__
@@ -33,9 +36,9 @@
 #define SYS_FREQ        16000000UL  /* 16MHz DCO */
 
 /* ============ ADC 通道定义 ============ */
-#define ADC_CH_UO2      INCH_0      /* P1.0 / A0:  U_o2 正弦波 */
+#define ADC_CH_UO2      INCH_0      /* P1.0 / A0:  U_o2 方波测量 */
 #define ADC_CH_UO4      INCH_0      /* P1.0 / A0:  U_o4 余弦波(复用) */
-#define ADC_CH_UO3_FFT  INCH_7      /* P1.7 / A7:  U_o3 波形与FFT采样 */
+#define ADC_CH_UO3_FFT  INCH_7      /* P1.7 / A7:  U_o3 波形 / U_o1 频谱采样 */
 
 /* 波形页采样通道: 当前固定看 U_o3 (P1.7/A7) */
 #define ADC_CH_WAVE_VIEW ADC_CH_UO3_FFT
@@ -54,10 +57,10 @@
 /* ============ 页面枚举 ============ */
 typedef enum {
     PAGE_INFO = 0,  /* 任务5: 显示队号姓名 */
-    PAGE_FREQ,      /* Uo1/Uo2: 频率/幅度 */
+    PAGE_FREQ,      /* Uo1/Uo2: 方波频率/幅度 */
     PAGE_WAVE,      /* Uo3: 波形 */
     PAGE_VPP,       /* Uo4: Vpp/Vrms */
-    PAGE_FFT,       /* Uo1: 频谱 */
+    PAGE_FFT,       /* Uo1: 频谱显示 */
     PAGE_COUNT
 } PageID;
 

@@ -78,7 +78,7 @@ static void page_freq(void)
     clear_text_band(2);
     if (g_freq_ready) {
         LCD_showMeasure(2, 4, "f=", g_freq_hz, 0, "Hz");
-        UART_sendStr("--- Uo1/Uo2 Test ---\r\nSignal: Sine & Square\r\nFreq (Uo1): ");
+        UART_sendStr("--- Uo1/Uo2 Test ---\r\nSignal: Square & Square\r\nFreq (Uo1): ");
         UART_sendNum(g_freq_hz);
         UART_sendStr(" Hz\r\n");
     } else {
@@ -110,13 +110,13 @@ static void page_vpp(void)
     if (vpp_sub_mode == 0) {
         LCD_showMeasure(2, 4, "Vpp=", (uint32_t)result.vpp_mv, 0, "mV");
         LCD_showMeasure(4, 4, "   =", (uint32_t)result.vpp_mv, 3, "V");
-        UART_sendStr("--- Uo4 Test ---\r\nSignal: Cosine\r\nMode: Vpp\r\nVpp: ");
+        UART_sendStr("--- Uo4 Test ---\r\nSignal: Uo4\r\nMode: Vpp\r\nVpp: ");
         UART_sendNum(result.vpp_mv);
         UART_sendStr(" mV\r\n\r\n");
     } else {
         LCD_showMeasure(2, 4, "Vrms=", (uint32_t)result.vrms_mv, 0, "mV");
         LCD_showMeasure(4, 4, "    =", (uint32_t)result.vrms_mv, 3, "V");
-        UART_sendStr("--- Uo4 Test ---\r\nSignal: Cosine\r\nMode: Vrms\r\nVrms: ");
+        UART_sendStr("--- Uo4 Test ---\r\nSignal: Uo4\r\nMode: Vrms\r\nVrms: ");
         UART_sendNum(result.vrms_mv);
         UART_sendStr(" mV\r\n\r\n");
     }
