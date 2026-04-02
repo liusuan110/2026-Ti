@@ -37,6 +37,9 @@
 #define ADC_CH_UO4      INCH_0      /* P1.0 / A0:  U_o4 余弦波(复用) */
 #define ADC_CH_UO3_FFT  INCH_7      /* P1.7 / A7:  U_o3/U_o5 波形与FFT采样 */
 
+/* 波形页采样通道: 默认看正弦(U_o2/A0)。若需看 U_o3/U_o5 再改回 ADC_CH_UO3_FFT */
+#define ADC_CH_WAVE_VIEW ADC_CH_UO2
+
 #define ADC_PIN_UO2     BIT0        /* P1.0 */
 #define ADC_PIN_UO4     BIT0        /* P1.0 复用 */
 #define ADC_PIN_UO3_FFT BIT7        /* P1.7 */
@@ -63,7 +66,7 @@ typedef enum {
 
 /* ============ 波形采样 ============ */
 #define WAVE_RAW_POINTS    96       /* 波形页 ADC 采样点数 (最高速, 覆盖 ~5-6 周期 @18kHz) */
-#define WAVE_DISPLAY_CYCLES 2       /* 自适应采样: 屏幕目标显示周期数 */
+#define WAVE_DISPLAY_CYCLES 3       /* 自适应采样: 屏幕目标显示周期数 */
 
 /* ============ FFT 参数 ============ */
 #define FFT_N           32          /* 32点FFT (节省RAM) */
