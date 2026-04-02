@@ -125,7 +125,7 @@ static void page_vpp(void)
     LCD_showGB2312Str(6, 0, (u8 *)"DBL KEY1:Vpp/Vrms");
 }
 
-/* Task 7: simplest waveform display (Uo3/Uo5). */
+/* Task 7: Uo3-only waveform display (5~10kHz triangle). */
 static void page_wave(void)
 {
     int16_t *wave_buf = g_buf_a;
@@ -152,13 +152,6 @@ static void page_wave(void)
 
     draw_title(PAGE_WAVE);
 
-    if (g_freq_hz > 100000U) {
-        LCD_clearPages(2, 7);
-        LCD_showGB2312Str(4, 16, (u8*)" 信号频率过高 ");
-        LCD_showGB2312Str(5, 16, (u8*)" 波形显示已关闭");
-        return;
-    }
-
     if (g_freq_period > 0U) {
         freq_hint = SYS_FREQ / g_freq_period;
     } else if (g_freq_hz > 0U) {
@@ -179,11 +172,6 @@ static void page_wave(void)
     }
     if (spp_from_timing < 6U) spp_from_timing = 6U;
     if (spp_from_timing > (max_points / 2U)) spp_from_timing = (uint16_t)(max_points / 2U);
-
-    /* 轻量一阶平滑，抑制高频毛刺导致的散点感 */
-    for (i = 1; i < max_points; i++) {
-        wave_buf[i] = (int16_t)(((int32_t)wave_buf[i - 1] * 3 + (int32_t)wave_buf[i] + 2) / 4);
-    }
 
     for (i = 0; i < max_points; i++) {
         int16_t v = wave_buf[i];
@@ -314,15 +302,9 @@ static void page_wave(void)
         if (smooth_map_max <= smooth_map_min) smooth_map_max = (int16_t)(smooth_map_min + 1);
 
         for (i = 1; i < screen_w; i++) {
-            uint32_t float_idx = ((uint32_t)i * (uint32_t)(valid_points - 1U) * 256U) / (uint32_t)(screen_w - 1U);
-            uint16_t idx_int = (uint16_t)(float_idx >> 8) + trigger_idx;
-            uint16_t idx_frac = (uint16_t)(float_idx & 0xFFU);
+            uint16_t idx_int = (uint16_t)(((uint32_t)i * (uint32_t)(valid_points - 1U)) / (uint32_t)(screen_w - 1U)) + trigger_idx;
+            uint16_t idx_int_prev = (uint16_t)(((uint32_t)(i - 1U) * (uint32_t)(valid_points - 1U)) / (uint32_t)(screen_w - 1U)) + trigger_idx;
 
-            uint32_t float_idx_prev = ((uint32_t)(i - 1U) * (uint32_t)(valid_points - 1U) * 256U) / (uint32_t)(screen_w - 1U);
-            uint16_t idx_int_prev = (uint16_t)(float_idx_prev >> 8) + trigger_idx;
-            uint16_t idx_frac_prev = (uint16_t)(float_idx_prev & 0xFFU);
-
-            int16_t v0, v1, vp0, vp1;
             int16_t val_curr;
             int16_t val_prev;
             int32_t norm_curr;
@@ -333,13 +315,8 @@ static void page_wave(void)
             if (idx_int >= (max_points - 1U)) idx_int = (uint16_t)(max_points - 1U);
             if (idx_int_prev >= (max_points - 1U)) idx_int_prev = (uint16_t)(max_points - 1U);
 
-            v0 = wave_buf[idx_int];
-            v1 = (idx_int + 1U < max_points) ? wave_buf[idx_int + 1U] : v0;
-            vp0 = wave_buf[idx_int_prev];
-            vp1 = (idx_int_prev + 1U < max_points) ? wave_buf[idx_int_prev + 1U] : vp0;
-
-            val_curr = (int16_t)(v0 + (((int32_t)(v1 - v0) * idx_frac) >> 8));
-            val_prev = (int16_t)(vp0 + (((int32_t)(vp1 - vp0) * idx_frac_prev) >> 8));
+            val_curr = wave_buf[idx_int];
+            val_prev = wave_buf[idx_int_prev];
 
             norm_curr = ((int32_t)val_curr - (int32_t)smooth_map_min) * 47 / ((int32_t)smooth_map_max - (int32_t)smooth_map_min);
             norm_prev = ((int32_t)val_prev - (int32_t)smooth_map_min) * 47 / ((int32_t)smooth_map_max - (int32_t)smooth_map_min);
