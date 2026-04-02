@@ -43,41 +43,50 @@ static void clear_text_band(u8 page_start)
 }
 
 /*
- * 在采样数据中估计“每周期样本点数”(spp)：
- * - 使用归一化前的自相关近似(去均值后点积)
- * - 仅搜索有效范围 [3, len/3]，避免过短/过长周期误判
+ * 基于过零检测的软件触发与周期估计（替代自相关）：
+ * 1. 计算信号平均值(DC)
+ * 2. 寻找第一个上升沿过零点作为触发点
+ * 3. 寻找下一个上升沿过零点估算SPP
  */
-static uint16_t wave_estimate_spp(const int16_t *raw, uint16_t len)
+static uint16_t wave_find_trigger_and_spp(const int16_t *raw, uint16_t len, uint16_t *out_spp)
 {
-    uint16_t lag;
-    uint16_t best_lag = 0;
+    uint16_t i;
     int32_t sum = 0;
     int16_t mean;
-    int32_t best_score = 0;
+    uint16_t trig_idx = 0;
+    uint16_t second_trig = 0;
 
-    if (len < 12) return 0;
+    if (len < 12) {
+        *out_spp = 0;
+        return 0;
+    }
 
-    for (lag = 0; lag < len; lag++) {
-        sum += raw[lag];
+    for (i = 0; i < len; i++) {
+        sum += raw[i];
     }
     mean = (int16_t)(sum / (int32_t)len);
 
-    for (lag = 3; lag <= (uint16_t)(len / 3); lag++) {
-        uint16_t i;
-        int32_t score = 0;
-        for (i = 0; i + lag < len; i++) {
-            int16_t a = (int16_t)(raw[i] - mean);
-            int16_t b = (int16_t)(raw[i + lag] - mean);
-            score += (int32_t)a * (int32_t)b;
-        }
-
-        if (score > best_score) {
-            best_score = score;
-            best_lag = lag;
+    for (i = 1; i < len / 2; i++) {
+        if (raw[i - 1] < mean && raw[i] >= mean) {
+            trig_idx = i;
+            break;
         }
     }
 
-    return best_lag;
+    for (i = trig_idx + 2; i < len - 1; i++) {
+        if (raw[i - 1] < mean && raw[i] >= mean) {
+            second_trig = i;
+            break;
+        }
+    }
+
+    if (second_trig > trig_idx) {
+        *out_spp = second_trig - trig_idx;
+    } else {
+        *out_spp = 0;
+    }
+
+    return trig_idx; /* 返回触发点作为绘制起点 */
 }
 
 static void draw_title(PageID page_id)
@@ -166,171 +175,93 @@ static void page_vpp(void)
 /* Task 7: simplest waveform display (Uo3/Uo5). */
 static void page_wave(void)
 {
-    int16_t *raw = g_buf_a;
+    /* 充分利用复用缓存，不额外增加全局数组爆发RAM */
+    int16_t *wave_buf = g_buf_a;
+    /* 采用配置里预设的最大点数(96点)避免越界 */
+    uint16_t max_points = WAVE_RAW_POINTS;
+    uint16_t screen_w = 128;
+    
     uint16_t i;
-    int16_t adc_min = 1023;
-    int16_t adc_max = 0;
-    int16_t span, pad;
-    int16_t map_min, map_max;
-    int16_t raw_map_min, raw_map_max;
-    uint16_t spp = 0;
-    uint16_t display_spp;
-    uint16_t seg_start = 0;
-    uint16_t seg_len = WAVE_RAW_POINTS;
-    uint16_t seg_end;
-    uint16_t seg_min = 1023;
-    uint16_t seg_max = 0;
-    uint16_t idx;
-    uint16_t idx_prev, idx_next;
-    int32_t val;
-    int32_t y_norm;
-    u8 y_pixel;
-    const u8 y_bottom = 63;
-    const u8 usable_h = (u8)(63 - 16 + 1);
-    const u8 x_step = 1;
-    uint32_t freq_hint = 25000U; /* 20~30kHz 显示默认中心频率 */
-
-    /* Frame-to-frame stabilizers */
-    static uint8_t seg_inited = 0;
-    static uint16_t last_seg_start = 0;
-    static uint16_t last_seg_len = 40;
-    static uint8_t scale_inited = 0;
-    static int16_t smooth_map_min = 0;
-    static int16_t smooth_map_max = 1023;
+    int32_t sum = 0;
+    int16_t dc_mean;
+    uint16_t trigger_idx = 0;
 
     draw_title(PAGE_WAVE);
 
-    /* 20~30kHz 正弦波显示:
-     * 1) 优先使用捕获频率提示
-     * 2) 频率异常时回退到 25kHz
-     * 3) 使用自适应采样让窗口稳定覆盖固定周期数
-     */
-    if (g_freq_period > 0U) {
-        freq_hint = SYS_FREQ / g_freq_period;
-    } else if (g_freq_hz > 0U) {
-        freq_hint = g_freq_hz;
+    // =========================================================
+    // 分流处理：250kHz 放弃画波形，只留 UI 和测量值
+    // =========================================================
+    if (g_freq_hz > 100000) {  
+        LCD_clearPages(2, 7); // 清空屏幕下方的波形区
+        LCD_showGB2312Str(4, 16, (u8*)" 信号频率过高 ");
+        LCD_showGB2312Str(5, 16, (u8*)" 波形显示已关闭");
+        return; // 提前退出，不再采样画图
     }
-    if (freq_hint < 20000U || freq_hint > 30000U) {
-        freq_hint = 25000U;
-    }
-    ADC_sampleToBufferAdaptive(ADC_CH_UO3_FFT, raw, WAVE_RAW_POINTS, freq_hint);
 
-    /* Global min/max. */
-    for (i = 0; i < WAVE_RAW_POINTS; i++) {
-        if (raw[i] > adc_max) adc_max = raw[i];
-        if (raw[i] < adc_min) adc_min = raw[i];
-    }
-    if (adc_max <= adc_min) adc_max = adc_min + 1;
+    // =========================================================
+    // 20~30kHz 处理：极速采样 + 触发 + 连线
+    // =========================================================
+    
+    // 1. 无延时全速盲采填满 buffer (最高 96 点)
+    ADC_sampleToBufferAdaptive(ADC_CH_UO3_FFT, wave_buf, max_points, 0);
 
-    /* 周期估计 + 固定 2 周期显示，减少高频/欠采样下的触发抖动 */
-    spp = wave_estimate_spp(raw, WAVE_RAW_POINTS);
-    if (spp < 4) {
-        if (seg_inited) {
-            spp = (uint16_t)(last_seg_len / 2U);
-        } else {
-            spp = 6;
+    // 2. 动态计算前一半点的均值作为直流偏置中点
+    for (i = 0; i < (max_points / 2); i++) {
+        sum += wave_buf[i];
+    }
+    dc_mean = (int16_t)(sum / (max_points / 2));
+
+    // 3. 软件施密特触发器 
+    int16_t threshold_high = dc_mean + 10; 
+    int16_t threshold_low  = dc_mean - 10;
+
+    // 在前 1/3 波段里寻找“可靠的上升沿”
+    for (i = 1; i < (max_points / 3); i++) {
+        if (wave_buf[i-1] <= threshold_low && wave_buf[i] >= threshold_high) {
+            trigger_idx = i;
+            break;
         }
     }
-    display_spp = spp;
-    if (display_spp < 4) display_spp = 4;
-    if (display_spp > 20U) display_spp = 20U;
-    if (display_spp > (WAVE_RAW_POINTS / 2U)) display_spp = (WAVE_RAW_POINTS / 2U);
 
-    seg_len = (uint16_t)(display_spp * 2U);
-    if (seg_len > WAVE_RAW_POINTS) seg_len = WAVE_RAW_POINTS;
-    seg_start = (uint16_t)((WAVE_RAW_POINTS - seg_len) / 2U);
-
-    /* Fallback to last stable segment if current detection is weak. */
-    if (seg_len < 12) {
-        if (seg_inited) {
-            seg_start = last_seg_start;
-            seg_len = last_seg_len;
-        } else {
-            seg_start = 0;
-            seg_len = WAVE_RAW_POINTS;
-        }
-    }
-    if (seg_len > WAVE_RAW_POINTS) seg_len = WAVE_RAW_POINTS;
-    if ((uint16_t)(seg_start + seg_len) > WAVE_RAW_POINTS) {
-        seg_start = (uint16_t)(WAVE_RAW_POINTS - seg_len);
-    }
-
-    /* Smooth segment position/length to reduce horizontal jitter. */
-    if (!seg_inited) {
-        last_seg_start = seg_start;
-        last_seg_len = seg_len;
-        seg_inited = 1;
-    } else {
-        last_seg_start = (uint16_t)(((uint32_t)last_seg_start * 7U + (uint32_t)seg_start * 3U + 5U) / 10U);
-        last_seg_len = (uint16_t)(((uint32_t)last_seg_len * 7U + (uint32_t)seg_len * 3U + 5U) / 10U);
-        if (last_seg_len < 12) last_seg_len = 12;
-        if (last_seg_len > WAVE_RAW_POINTS) last_seg_len = WAVE_RAW_POINTS;
-        if ((uint16_t)(last_seg_start + last_seg_len) > WAVE_RAW_POINTS) {
-            last_seg_start = (uint16_t)(WAVE_RAW_POINTS - last_seg_len);
-        }
-        seg_start = last_seg_start;
-        seg_len = last_seg_len;
-    }
-    seg_end = (uint16_t)(seg_start + seg_len - 1);
-
-    /* Vertical mapping based on selected segment + frame smoothing. */
-    seg_min = 1023;
-    seg_max = 0;
-    for (i = seg_start; i <= seg_end; i++) {
-        if (raw[i] > seg_max) seg_max = raw[i];
-        if (raw[i] < seg_min) seg_min = raw[i];
-    }
-
-    span = (int16_t)(seg_max - seg_min);
-    if (span < 1) span = 1;
-    pad = (int16_t)(span / 8);
-    if (pad < 4) pad = 4;
-
-    raw_map_min = (int16_t)(seg_min - pad);
-    raw_map_max = (int16_t)(seg_max + pad);
-    if (raw_map_min < 0) raw_map_min = 0;
-    if (raw_map_max > 1023) raw_map_max = 1023;
-    if (raw_map_max <= raw_map_min + 16) raw_map_max = (int16_t)(raw_map_min + 16);
-    if (raw_map_max > 1023) {
-        raw_map_max = 1023;
-        raw_map_min = (int16_t)(raw_map_max - 16);
-    }
-
-    if (!scale_inited) {
-        smooth_map_min = raw_map_min;
-        smooth_map_max = raw_map_max;
-        scale_inited = 1;
-    } else {
-        smooth_map_min = (int16_t)(((int32_t)smooth_map_min * 8 + (int32_t)raw_map_min * 2 + 5) / 10);
-        smooth_map_max = (int16_t)(((int32_t)smooth_map_max * 8 + (int32_t)raw_map_max * 2 + 5) / 10);
-        if (smooth_map_max <= smooth_map_min + 16) smooth_map_max = (int16_t)(smooth_map_min + 16);
-        if (smooth_map_max > 1023) {
-            smooth_map_max = 1023;
-            smooth_map_min = (int16_t)(smooth_map_max - 16);
-        }
-        if (smooth_map_min < 0) smooth_map_min = 0;
-    }
-
-    map_min = smooth_map_min;
-    map_max = smooth_map_max;
-
+    // 4. 清理波形显示区准备重绘
     LCD_clearPages(2, 7);
+    
+    // 5. 扣除触发占用的前端，剩余有效点数
+    uint16_t valid_points = max_points - trigger_idx;
+    if (valid_points < 4) valid_points = max_points; // 失败保护
+    
+    // 将有限点数线性伸缩插值到 128 个像素宽度上 
+    for (i = 1; i < screen_w; i++) {
+        // 计算当前 x(i) 对应的插值点与前个插值点
+        uint32_t float_idx = ((uint32_t)i * (valid_points - 1) * 256U) / (screen_w - 1);
+        uint16_t idx_int = (uint16_t)(float_idx >> 8) + trigger_idx;
+        uint16_t idx_frac = (uint16_t)(float_idx & 0xFF);
+        int16_t val_curr = wave_buf[idx_int] + (((int32_t)(wave_buf[idx_int + 1] - wave_buf[idx_int]) * idx_frac) >> 8);
+        if (idx_int >= max_points - 1) val_curr = wave_buf[max_points - 1];
 
-    /* Dot-style waveform: 2-cycle segment stretched to 128 columns. */
-    for (i = 0; i < 128; i += x_step) {
-        idx = (uint16_t)(seg_start + ((uint32_t)i * (seg_len - 1) / 127U));
-        idx_prev = (idx > seg_start) ? (uint16_t)(idx - 1) : idx;
-        idx_next = (idx < seg_end) ? (uint16_t)(idx + 1) : idx;
+        uint32_t float_idx_prev = ((uint32_t)(i - 1) * (valid_points - 1) * 256U) / (screen_w - 1);
+        uint16_t idx_int_prev = (uint16_t)(float_idx_prev >> 8) + trigger_idx;
+        uint16_t idx_frac_prev = (uint16_t)(float_idx_prev & 0xFF);
+        int16_t val_prev = wave_buf[idx_int_prev] + (((int32_t)(wave_buf[idx_int_prev + 1] - wave_buf[idx_int_prev]) * idx_frac_prev) >> 8);
+        if (idx_int_prev >= max_points - 1) val_prev = wave_buf[max_points - 1];
 
-        /* Light local smoothing only for display aesthetics. */
-        val = ((int32_t)raw[idx_prev] + ((int32_t)raw[idx] << 1) + (int32_t)raw[idx_next] + 2) / 4;
+        // 映射到坐标体系，高度48像素
+        uint8_t y_curr = 63 - (uint8_t)(((uint32_t)val_curr * 48) / 1024);
+        uint8_t y_prev = 63 - (uint8_t)(((uint32_t)val_prev * 48) / 1024);
+        
+        if (y_curr < 16) y_curr = 16; if (y_curr > 63) y_curr = 63;
+        if (y_prev < 16) y_prev = 16; if (y_prev > 63) y_prev = 63;
 
-        y_norm = (val - map_min) * (usable_h - 1) / (map_max - map_min);
-        if (y_norm < 0) y_norm = 0;
-        if (y_norm > (usable_h - 1)) y_norm = (usable_h - 1);
-
-        y_pixel = (u8)(y_bottom - (u8)y_norm);
-        LCD_drawDot((u8)i, y_pixel);
+        // 核心视觉优化：画垂直线段相连
+        if (y_curr == y_prev) {
+            LCD_drawDot((u8)i, y_curr);
+        } else if (y_curr > y_prev) {
+            uint8_t y;
+            for (y = y_prev; y <= y_curr; y++) LCD_drawDot((u8)i, y);
+        } else {
+            uint8_t y;
+            for (y = y_curr; y <= y_prev; y++) LCD_drawDot((u8)i, y);
+        }
     }
 }
 

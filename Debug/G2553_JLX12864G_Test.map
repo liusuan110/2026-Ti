@@ -1,10 +1,10 @@
 ******************************************************************************
                   MSP430 Linker PC v21.6.1                     
 ******************************************************************************
->> Linked Wed Apr  1 21:32:51 2026
+>> Linked Thu Apr  2 20:09:17 2026
 
 OUTPUT FILE NAME:   <G2553_JLX12864G_Test.out>
-ENTRY POINT SYMBOL: "_c_int00_noargs"  address: 0000e086
+ENTRY POINT SYMBOL: "_c_int00_noargs"  address: 0000ddda
 
 
 MEMORY CONFIGURATION
@@ -14,12 +14,12 @@ MEMORY CONFIGURATION
   SFR                   00000000   00000010  00000000  00000010  RWIX
   PERIPHERALS_8BIT      00000010   000000f0  00000000  000000f0  RWIX
   PERIPHERALS_16BIT     00000100   00000100  00000000  00000100  RWIX
-  RAM                   00000200   00000200  000001a7  00000059  RWIX
+  RAM                   00000200   00000200  0000019b  00000065  RWIX
   INFOD                 00001000   00000040  00000000  00000040  RWIX
   INFOC                 00001040   00000040  00000000  00000040  RWIX
   INFOB                 00001080   00000040  00000000  00000040  RWIX
   INFOA                 000010c0   00000040  00000000  00000040  RWIX
-  FLASH                 0000c000   00003fde  00002426  00001bb8  RWIX
+  FLASH                 0000c000   00003fde  000021a0  00001e3e  RWIX
   BSLSIGNATURE          0000ffde   00000002  00000002  00000000  RWIX  ffff 
   INT00                 0000ffe0   00000002  00000002  00000000  RWIX
   INT01                 0000ffe2   00000002  00000000  00000002  RWIX
@@ -47,116 +47,114 @@ section   page    origin      length       input sections
 .bss       0    00000200    0000012c     UNINITIALIZED
                   00000200    000000c0     display.obj (.bss:g_buf_a)
                   000002c0    00000040     display.obj (.bss:g_buf_b)
-                  00000300    00000020     display.obj (.bss:mag_smooth$7)
+                  00000300    00000020     display.obj (.bss:mag_smooth$1)
                   00000320    0000000c     lcd_draw.obj (.bss:num_buf)
 
-.data      0    0000032c    0000002b     UNINITIALIZED
-                  0000032c    00000014     display.obj (.data)
-                  00000340    00000012     timer_capture.obj (.data)
-                  00000352    00000004     main.obj (.data)
-                  00000356    00000001     key.obj (.data)
+.data      0    0000032c    0000001f     UNINITIALIZED
+                  0000032c    00000012     timer_capture.obj (.data)
+                  0000033e    00000008     display.obj (.data)
+                  00000346    00000004     main.obj (.data)
+                  0000034a    00000001     key.obj (.data)
 
 .stack     0    000003b0    00000050     UNINITIALIZED
                   000003b0    00000002     rts430_eabi.lib : boot.c.obj (.stack)
                   000003b2    0000004e     --HOLE--
 
-.text      0    0000c000    000021f8     
-                  0000c000    00000438     display.obj (.text:page_wave)
-                  0000c438    00000336     adc_measure.obj (.text:ADC_measureVpp)
-                  0000c76e    00000238     display.obj (.text:page_fft)
-                  0000c9a6    000001a2     fft.obj (.text:fft32)
-                  0000cb48    00000136     JLX12864G.obj (.text:LCD_showGB2312Str)
-                  0000cc7e    00000120     main.obj (.text:main)
-                  0000cd9e    0000011a     display.obj (.text:page_vpp)
-                  0000ceb8    00000110     lcd_draw.obj (.text:LCD_drawBars)
-                  0000cfc8    000000f4     adc_measure.obj (.text:ADC_sampleToBufferAdaptive)
-                  0000d0bc    000000ee     lcd_draw.obj (.text:LCD_showUint)
-                  0000d1aa    000000d6     display.obj (.text:page_freq)
-                  0000d280    000000c8     display.obj (.text:wave_estimate_spp)
-                  0000d348    000000bc     JLX12864G.obj (.text:pinInit)
-                  0000d404    000000b6     JLX12864G.obj (.text:LCD_init)
-                  0000d4ba    0000009e     GPIO.obj (.text:GPIO_pinMode)
-                  0000d558    0000007c     JLX12864G.obj (.text:LCD_getAndWrite16x16)
-                  0000d5d4    0000007c     rts430_eabi.lib : copy_decompress_lzss.c.obj (.text:decompress:lzss:__TI_decompress_lzss)
-                  0000d650    0000007a     uart.obj (.text:UART_sendNum)
-                  0000d6ca    00000078     JLX12864G.obj (.text:LCD_getAndWrite8x16)
-                  0000d742    00000076     timer_capture.obj (.text:Timer0_A0_ISR)
-                  0000d7b8    00000070     lcd_draw.obj (.text:LCD_showMeasure)
-                  0000d828    00000070     JLX12864G.obj (.text:LCD_writeCmd)
-                  0000d898    00000070     JLX12864G.obj (.text:LCD_writeData)
-                  0000d908    00000064     lcd_draw.obj (.text:uint_to_str)
-                  0000d96c    0000005c     rts430_eabi.lib : lsr32.asm.obj (.text:l_lsr_const)
-                  0000d9c8    00000058                     : div32u.asm.obj (.text)
-                  0000da20    00000058     adc_measure.obj (.text:vpp_calcDelayLoops)
-                  0000da78    0000004c     JLX12864G.obj (.text:LCD_sendCmdToROM)
-                  0000dac4    0000004c     rts430_eabi.lib : lsr16.asm.obj (.text)
-                  0000db10    00000046     JLX12864G.obj (.text:LCD_clear)
-                  0000db56    00000044     fft.obj (.text:fft_magnitude)
-                  0000db9a    00000042     adc_measure.obj (.text:ADC_sampleToBuffer)
-                  0000dbdc    00000042     rts430_eabi.lib : autoinit.c.obj (.text:__TI_auto_init_nobinit_nopinit:__TI_auto_init_nobinit_nopinit)
-                  0000dc1e    00000040     JLX12864G.obj (.text:getDataFromROM)
-                  0000dc5e    00000040     rts430_eabi.lib : div32s.asm.obj (.text)
-                  0000dc9e    0000003e                     : asr32.asm.obj (.text:l_asr_const)
-                  0000dcdc    0000003e                     : lsl32.asm.obj (.text:l_lsl_const)
-                  0000dd1a    0000003e     display.obj (.text:page_info)
-                  0000dd58    00000038     display.obj (.text:clear_text_band)
-                  0000dd90    00000034     lcd_draw.obj (.text:LCD_clearPages)
-                  0000ddc4    00000032     display.obj (.text:Display_refresh)
-                  0000ddf6    0000002c     timer_capture.obj (.text:Capture_startFreq)
-                  0000de22    0000002c     lcd_draw.obj (.text:LCD_drawDot)
-                  0000de4e    0000002c     rts430_eabi.lib : div16s.asm.obj (.text)
-                  0000de7a    0000002c                     : lsl16.asm.obj (.text)
-                  0000dea6    0000002a     GPIO.obj (.text:GPIO_pinWrite)
-                  0000ded0    0000002a     JLX12864G.obj (.text:LCD_setAddr)
-                  0000defa    0000002a     uart.obj (.text:UART_init)
-                  0000df24    0000002a     display.obj (.text:draw_title)
-                  0000df4e    00000028     main.obj (.text:page_next)
-                  0000df76    00000026     GPIO.obj (.text:GPIO_pinRead)
-                  0000df9c    00000026     rts430_eabi.lib : mult32.asm.obj (.text)
-                  0000dfc2    00000022     key.obj (.text:Key_init)
-                  0000dfe4    00000022     key.obj (.text:Port_1_ISR)
-                  0000e006    00000022     rts430_eabi.lib : mult1632.asm.obj (.text:__mpyul)
-                  0000e028    00000022     fft.obj (.text:bit_reverse)
-                  0000e04a    00000020     Clock.obj (.text:delay)
-                  0000e06a    0000001c     Clock.obj (.text:Clock_init)
-                  0000e086    0000001c     rts430_eabi.lib : boot.c.obj (.text:_c_int00_noargs)
-                  0000e0a2    00000016                     : mult1632.asm.obj (.text:__mpysl)
-                  0000e0b8    00000016                     : div16u.asm.obj (.text)
-                  0000e0ce    00000014     timer_capture.obj (.text:Capture_init)
-                  0000e0e2    00000014     rts430_eabi.lib : copy_zero_init.c.obj (.text:decompress:ZI:__TI_zero_init_nomemset:__TI_zero_init_nomemset)
-                  0000e0f6    00000014                     : mult16.asm.obj (.text)
-                  0000e10a    00000012     key.obj (.text:Key_getEvent)
-                  0000e11c    00000012     uart.obj (.text:UART_sendStr)
-                  0000e12e    00000012     rts430_eabi.lib : copy_decompress_none.c.obj (.text:decompress:none:__TI_decompress_none)
-                  0000e140    00000012                     : memcpy.c.obj (.text:memcpy)
-                  0000e152    00000010                     : epilog.asm.obj (.text)
-                  0000e162    00000010                     : strcpy.c.obj (.text:strcpy)
-                  0000e172    0000000e     fft.obj (.text:fft_cos)
-                  0000e180    0000000e     rts430_eabi.lib : strlen.c.obj (.text:strlen)
-                  0000e18e    0000000c     display.obj (.text:Display_toggleSubMode)
-                  0000e19a    0000000c     uart.obj (.text:UART_sendChar)
-                  0000e1a6    0000000c     fft.obj (.text:fft_sin)
-                  0000e1b2    0000000c     main.obj (.text:page_enter)
-                  0000e1be    0000000c     main.obj (.text:page_leave)
-                  0000e1ca    0000000a     display.obj (.text:Display_init)
-                  0000e1d4    00000008     adc_measure.obj (.text:ADC_init)
-                  0000e1dc    00000008     timer_capture.obj (.text:Capture_stopFreq)
-                  0000e1e4    00000008     rts430_eabi.lib : isr_trap.asm.obj (.text:_isr:__TI_ISR_TRAP)
-                  0000e1ec    00000006                     : exit.c.obj (.text:abort)
-                  0000e1f2    00000004                     : pre_init.c.obj (.text:_system_pre_init)
-                  0000e1f6    00000002                     : startup.c.obj (.text:_system_post_cinit)
+.text      0    0000c000    00001f4c     
+                  0000c000    00000336     adc_measure.obj (.text:ADC_measureVpp)
+                  0000c336    00000280     display.obj (.text:page_wave)
+                  0000c5b6    00000238     display.obj (.text:page_fft)
+                  0000c7ee    000001a2     fft.obj (.text:fft32)
+                  0000c990    00000136     JLX12864G.obj (.text:LCD_showGB2312Str)
+                  0000cac6    00000120     main.obj (.text:main)
+                  0000cbe6    0000011a     display.obj (.text:page_vpp)
+                  0000cd00    00000110     lcd_draw.obj (.text:LCD_drawBars)
+                  0000ce10    000000f4     adc_measure.obj (.text:ADC_sampleToBufferAdaptive)
+                  0000cf04    000000ee     lcd_draw.obj (.text:LCD_showUint)
+                  0000cff2    000000d6     display.obj (.text:page_freq)
+                  0000d0c8    000000bc     JLX12864G.obj (.text:pinInit)
+                  0000d184    000000b6     JLX12864G.obj (.text:LCD_init)
+                  0000d23a    0000009e     GPIO.obj (.text:GPIO_pinMode)
+                  0000d2d8    0000007c     JLX12864G.obj (.text:LCD_getAndWrite16x16)
+                  0000d354    0000007c     rts430_eabi.lib : copy_decompress_lzss.c.obj (.text:decompress:lzss:__TI_decompress_lzss)
+                  0000d3d0    0000007a     uart.obj (.text:UART_sendNum)
+                  0000d44a    00000078     JLX12864G.obj (.text:LCD_getAndWrite8x16)
+                  0000d4c2    00000076     timer_capture.obj (.text:Timer0_A0_ISR)
+                  0000d538    00000070     lcd_draw.obj (.text:LCD_showMeasure)
+                  0000d5a8    00000070     JLX12864G.obj (.text:LCD_writeCmd)
+                  0000d618    00000070     JLX12864G.obj (.text:LCD_writeData)
+                  0000d688    00000064     lcd_draw.obj (.text:uint_to_str)
+                  0000d6ec    0000005c     rts430_eabi.lib : lsr32.asm.obj (.text:l_lsr_const)
+                  0000d748    00000058                     : div32u.asm.obj (.text)
+                  0000d7a0    00000058     adc_measure.obj (.text:vpp_calcDelayLoops)
+                  0000d7f8    0000004c     JLX12864G.obj (.text:LCD_sendCmdToROM)
+                  0000d844    0000004c     rts430_eabi.lib : lsr16.asm.obj (.text)
+                  0000d890    00000046     JLX12864G.obj (.text:LCD_clear)
+                  0000d8d6    00000044     fft.obj (.text:fft_magnitude)
+                  0000d91a    00000042     adc_measure.obj (.text:ADC_sampleToBuffer)
+                  0000d95c    00000042     rts430_eabi.lib : autoinit.c.obj (.text:__TI_auto_init_nobinit_nopinit:__TI_auto_init_nobinit_nopinit)
+                  0000d99e    00000040     JLX12864G.obj (.text:getDataFromROM)
+                  0000d9de    00000040     rts430_eabi.lib : div32s.asm.obj (.text)
+                  0000da1e    0000003e                     : asr32.asm.obj (.text:l_asr_const)
+                  0000da5c    0000003e                     : lsl32.asm.obj (.text:l_lsl_const)
+                  0000da9a    0000003e     display.obj (.text:page_info)
+                  0000dad8    00000038     display.obj (.text:clear_text_band)
+                  0000db10    00000034     lcd_draw.obj (.text:LCD_clearPages)
+                  0000db44    00000032     display.obj (.text:Display_refresh)
+                  0000db76    0000002c     timer_capture.obj (.text:Capture_startFreq)
+                  0000dba2    0000002c     lcd_draw.obj (.text:LCD_drawDot)
+                  0000dbce    0000002c     rts430_eabi.lib : lsl16.asm.obj (.text)
+                  0000dbfa    0000002a     GPIO.obj (.text:GPIO_pinWrite)
+                  0000dc24    0000002a     JLX12864G.obj (.text:LCD_setAddr)
+                  0000dc4e    0000002a     uart.obj (.text:UART_init)
+                  0000dc78    0000002a     display.obj (.text:draw_title)
+                  0000dca2    00000028     main.obj (.text:page_next)
+                  0000dcca    00000026     GPIO.obj (.text:GPIO_pinRead)
+                  0000dcf0    00000026     rts430_eabi.lib : mult32.asm.obj (.text)
+                  0000dd16    00000022     key.obj (.text:Key_init)
+                  0000dd38    00000022     key.obj (.text:Port_1_ISR)
+                  0000dd5a    00000022     rts430_eabi.lib : mult1632.asm.obj (.text:__mpyul)
+                  0000dd7c    00000022     fft.obj (.text:bit_reverse)
+                  0000dd9e    00000020     Clock.obj (.text:delay)
+                  0000ddbe    0000001c     Clock.obj (.text:Clock_init)
+                  0000ddda    0000001c     rts430_eabi.lib : boot.c.obj (.text:_c_int00_noargs)
+                  0000ddf6    00000016                     : mult1632.asm.obj (.text:__mpysl)
+                  0000de0c    00000016                     : div16u.asm.obj (.text)
+                  0000de22    00000014     timer_capture.obj (.text:Capture_init)
+                  0000de36    00000014     rts430_eabi.lib : copy_zero_init.c.obj (.text:decompress:ZI:__TI_zero_init_nomemset:__TI_zero_init_nomemset)
+                  0000de4a    00000014                     : mult16.asm.obj (.text)
+                  0000de5e    00000012     key.obj (.text:Key_getEvent)
+                  0000de70    00000012     uart.obj (.text:UART_sendStr)
+                  0000de82    00000012     rts430_eabi.lib : copy_decompress_none.c.obj (.text:decompress:none:__TI_decompress_none)
+                  0000de94    00000012                     : memcpy.c.obj (.text:memcpy)
+                  0000dea6    00000010                     : epilog.asm.obj (.text)
+                  0000deb6    00000010                     : strcpy.c.obj (.text:strcpy)
+                  0000dec6    0000000e     fft.obj (.text:fft_cos)
+                  0000ded4    0000000e     rts430_eabi.lib : strlen.c.obj (.text:strlen)
+                  0000dee2    0000000c     display.obj (.text:Display_toggleSubMode)
+                  0000deee    0000000c     uart.obj (.text:UART_sendChar)
+                  0000defa    0000000c     fft.obj (.text:fft_sin)
+                  0000df06    0000000c     main.obj (.text:page_enter)
+                  0000df12    0000000c     main.obj (.text:page_leave)
+                  0000df1e    0000000a     display.obj (.text:Display_init)
+                  0000df28    00000008     adc_measure.obj (.text:ADC_init)
+                  0000df30    00000008     timer_capture.obj (.text:Capture_stopFreq)
+                  0000df38    00000008     rts430_eabi.lib : isr_trap.asm.obj (.text:_isr:__TI_ISR_TRAP)
+                  0000df40    00000006                     : exit.c.obj (.text:abort)
+                  0000df46    00000004                     : pre_init.c.obj (.text:_system_pre_init)
+                  0000df4a    00000002                     : startup.c.obj (.text:_system_post_cinit)
 
-.const     0    0000e1f8    00000202     
-                  0000e1f8    000001b8     display.obj (.const:.string)
-                  0000e3b0    00000040     fft.obj (.const:sin_table)
-                  0000e3f0    0000000a     display.obj (.const:page_titles)
+.const     0    0000df4c    00000230     
+                  0000df4c    000001e6     display.obj (.const:.string)
+                  0000e132    00000040     fft.obj (.const:sin_table)
+                  0000e172    0000000a     display.obj (.const:page_titles)
 
-.cinit     0    0000e3fa    0000002c     
-                  0000e3fa    00000019     (.cinit..data.load) [load image, compression = lzss]
-                  0000e413    00000001     --HOLE-- [fill = 0]
-                  0000e414    00000006     (__TI_handler_table)
-                  0000e41a    00000004     (.cinit..bss.load) [load image, compression = zero_init]
-                  0000e41e    00000008     (__TI_cinit_table)
+.cinit     0    0000e17c    00000024     
+                  0000e17c    00000011     (.cinit..data.load) [load image, compression = lzss]
+                  0000e18d    00000001     --HOLE-- [fill = 0]
+                  0000e18e    00000006     (__TI_handler_table)
+                  0000e194    00000004     (.cinit..bss.load) [load image, compression = zero_init]
+                  0000e198    00000008     (__TI_cinit_table)
 
 .binit     0    0000c000    00000000     
 
@@ -220,7 +218,7 @@ MODULE SUMMARY
        Module                       code   ro data   rw data
        ------                       ----   -------   -------
     .\
-       display.obj                  2576   450       308    
+       display.obj                  1936   496       296    
        JLX12864G.obj                1400   0         0      
        adc_measure.obj              1228   0         0      
        lcd_draw.obj                 818    0         12     
@@ -232,7 +230,7 @@ MODULE SUMMARY
        key.obj                      86     2         1      
        Clock.obj                    60     0         0      
     +--+----------------------------+------+---------+---------+
-       Total:                       7688   518       343    
+       Total:                       7048   564       331    
                                                             
     C:\TI\ccs2020\ccs\tools\compiler\ti-cgt-msp430_21.6.1.LTS\lib\rts430_eabi.lib
        copy_decompress_lzss.c.obj   124    0         0      
@@ -244,7 +242,6 @@ MODULE SUMMARY
        asr32.asm.obj                62     0         0      
        lsl32.asm.obj                62     0         0      
        mult1632.asm.obj             56     0         0      
-       div16s.asm.obj               44     0         0      
        lsl16.asm.obj                44     0         0      
        mult32.asm.obj               38     0         0      
        boot.c.obj                   28     2         0      
@@ -272,24 +269,24 @@ MODULE SUMMARY
        int14.asm.obj                0      2         0      
        startup.c.obj                2      0         0      
     +--+----------------------------+------+---------+---------+
-       Total:                       1008   24        0      
+       Total:                       964    24        0      
                                                             
        Stack:                       0      0         80     
-       Linker Generated:            0      43        0      
+       Linker Generated:            0      35        0      
     +--+----------------------------+------+---------+---------+
-       Grand Total:                 8696   585       423    
+       Grand Total:                 8012   623       411    
 
 
 LINKER GENERATED COPY TABLES
 
-__TI_cinit_table @ 0000e41e records: 2, size/record: 4, table size: 8
-	.data: load addr=0000e3fa, load size=00000019 bytes, run addr=0000032c, run size=0000002b bytes, compression=lzss
-	.bss: load addr=0000e41a, load size=00000004 bytes, run addr=00000200, run size=0000012c bytes, compression=zero_init
+__TI_cinit_table @ 0000e198 records: 2, size/record: 4, table size: 8
+	.data: load addr=0000e17c, load size=00000011 bytes, run addr=0000032c, run size=0000001f bytes, compression=lzss
+	.bss: load addr=0000e194, load size=00000004 bytes, run addr=00000200, run size=0000012c bytes, compression=zero_init
 
 
 LINKER GENERATED HANDLER TABLE
 
-__TI_handler_table @ 0000e414 records: 3, size/record: 2, table size: 6
+__TI_handler_table @ 0000e18e records: 3, size/record: 2, table size: 6
 	index: 0, handler: __TI_zero_init
 	index: 1, handler: __TI_decompress_lzss
 	index: 2, handler: __TI_decompress_none
@@ -306,14 +303,14 @@ address   name
 00000049  ADC10DTC1                     
 000001b4  ADC10MEM                      
 000001bc  ADC10SA                       
-0000e1d4  ADC_init                      
-0000c438  ADC_measureVpp                
-0000db9a  ADC_sampleToBuffer            
-0000cfc8  ADC_sampleToBufferAdaptive    
+0000df28  ADC_init                      
+0000c000  ADC_measureVpp                
+0000d91a  ADC_sampleToBuffer            
+0000ce10  ADC_sampleToBufferAdaptive    
 00000057  BCSCTL1                       
 00000058  BCSCTL2                       
 00000053  BCSCTL3                       
-0000e1ec  C$$EXIT                       
+0000df40  C$$EXIT                       
 00000059  CACTL1                        
 0000005a  CACTL2                        
 000010fb  CALBC1_12MHZ                  
@@ -325,41 +322,41 @@ address   name
 000010fe  CALDCO_1MHZ                   
 000010fc  CALDCO_8MHZ                   
 0000005b  CAPD                          
-0000e0ce  Capture_init                  
-0000ddf6  Capture_startFreq             
-0000e1dc  Capture_stopFreq              
-0000e06a  Clock_init                    
+0000de22  Capture_init                  
+0000db76  Capture_startFreq             
+0000df30  Capture_stopFreq              
+0000ddbe  Clock_init                    
 00000056  DCOCTL                        
-0000e1ca  Display_init                  
-0000ddc4  Display_refresh               
-0000e18e  Display_toggleSubMode         
+0000df1e  Display_init                  
+0000db44  Display_refresh               
+0000dee2  Display_toggleSubMode         
 00000128  FCTL1                         
 0000012a  FCTL2                         
 0000012c  FCTL3                         
-0000d4ba  GPIO_pinMode                  
-0000df76  GPIO_pinRead                  
-0000dea6  GPIO_pinWrite                 
+0000d23a  GPIO_pinMode                  
+0000dcca  GPIO_pinRead                  
+0000dbfa  GPIO_pinWrite                 
 00000000  IE1                           
 00000001  IE2                           
 00000002  IFG1                          
 00000003  IFG2                          
-0000e10a  Key_getEvent                  
-0000dfc2  Key_init                      
-0000e10a  Key_scan                      
-0000db10  LCD_clear                     
-0000dd90  LCD_clearPages                
-0000ceb8  LCD_drawBars                  
-0000de22  LCD_drawDot                   
-0000d558  LCD_getAndWrite16x16          
-0000d6ca  LCD_getAndWrite8x16           
-0000d404  LCD_init                      
-0000da78  LCD_sendCmdToROM              
-0000ded0  LCD_setAddr                   
-0000cb48  LCD_showGB2312Str             
-0000d7b8  LCD_showMeasure               
-0000d0bc  LCD_showUint                  
-0000d828  LCD_writeCmd                  
-0000d898  LCD_writeData                 
+0000de5e  Key_getEvent                  
+0000dd16  Key_init                      
+0000de5e  Key_scan                      
+0000d890  LCD_clear                     
+0000db10  LCD_clearPages                
+0000cd00  LCD_drawBars                  
+0000dba2  LCD_drawDot                   
+0000d2d8  LCD_getAndWrite16x16          
+0000d44a  LCD_getAndWrite8x16           
+0000d184  LCD_init                      
+0000d7f8  LCD_sendCmdToROM              
+0000dc24  LCD_setAddr                   
+0000c990  LCD_showGB2312Str             
+0000d538  LCD_showMeasure               
+0000cf04  LCD_showUint                  
+0000d5a8  LCD_writeCmd                  
+0000d618  LCD_writeData                 
 00000022  P1DIR                         
 00000025  P1IE                          
 00000024  P1IES                         
@@ -384,7 +381,7 @@ address   name
 00000010  P3REN                         
 0000001b  P3SEL                         
 00000043  P3SEL2                        
-0000dfe4  Port_1_ISR                    
+0000dd38  Port_1_ISR                    
 00000172  TA0CCR0                       
 00000174  TA0CCR1                       
 00000176  TA0CCR2                       
@@ -408,11 +405,11 @@ address   name
 000010c0  TLV_CHECKSUM                  
 000010f7  TLV_DCO_30_LEN                
 000010f6  TLV_DCO_30_TAG                
-0000d742  Timer0_A0_ISR                 
-0000defa  UART_init                     
-0000e19a  UART_sendChar                 
-0000d650  UART_sendNum                  
-0000e11c  UART_sendStr                  
+0000d4c2  Timer0_A0_ISR                 
+0000dc4e  UART_init                     
+0000deee  UART_sendChar                 
+0000d3d0  UART_sendNum                  
+0000de70  UART_sendStr                  
 0000005d  UCA0ABCTL                     
 00000062  UCA0BR0                       
 00000063  UCA0BR1                       
@@ -437,15 +434,15 @@ address   name
 00000120  WDTCTL                        
 00000400  __STACK_END                   
 00000050  __STACK_SIZE                  
-0000e41e  __TI_CINIT_Base               
-0000e426  __TI_CINIT_Limit              
-0000e426  __TI_CINIT_Warm               
-0000e414  __TI_Handler_Table_Base       
-0000e41a  __TI_Handler_Table_Limit      
-0000e1e4  __TI_ISR_TRAP                 
-0000dbdc  __TI_auto_init_nobinit_nopinit
-0000d5d4  __TI_decompress_lzss          
-0000e12e  __TI_decompress_none          
+0000e198  __TI_CINIT_Base               
+0000e1a0  __TI_CINIT_Limit              
+0000e1a0  __TI_CINIT_Warm               
+0000e18e  __TI_Handler_Table_Base       
+0000e194  __TI_Handler_Table_Limit      
+0000df38  __TI_ISR_TRAP                 
+0000d95c  __TI_auto_init_nobinit_nopinit
+0000d354  __TI_decompress_lzss          
+0000de82  __TI_decompress_none          
 0000ffe0  __TI_int00                    
 0000ffe4  __TI_int02                    
 0000ffe6  __TI_int03                    
@@ -462,124 +459,122 @@ address   name
 ffffffff  __TI_pprof_out_hndl           
 ffffffff  __TI_prof_data_size           
 ffffffff  __TI_prof_data_start          
-0000e0e2  __TI_zero_init_nomemset       
+0000de36  __TI_zero_init_nomemset       
 ffffffff  __c_args__                    
-0000de4e  __mspabi_divi                 
-0000dc5e  __mspabi_divli                
-0000e0b8  __mspabi_divu                 
-0000d9c8  __mspabi_divul                
-0000e15e  __mspabi_func_epilog_1        
-0000e15c  __mspabi_func_epilog_2        
-0000e15a  __mspabi_func_epilog_3        
-0000e158  __mspabi_func_epilog_4        
-0000e156  __mspabi_func_epilog_5        
-0000e154  __mspabi_func_epilog_6        
-0000e152  __mspabi_func_epilog_7        
-0000e0f6  __mspabi_mpyi                 
-0000e0f6  __mspabi_mpyi_sw              
-0000df9c  __mspabi_mpyl                 
-0000df9c  __mspabi_mpyl_sw              
-0000e0a2  __mspabi_mpysl                
-0000e0a2  __mspabi_mpysl_sw             
-0000e006  __mspabi_mpyul                
-0000e006  __mspabi_mpyul_sw             
-0000de4e  __mspabi_remi                 
-0000dc5e  __mspabi_remli                
-0000e0b8  __mspabi_remu                 
-0000d9c8  __mspabi_remul                
-0000de7a  __mspabi_slli                 
-0000dea2  __mspabi_slli_1               
-0000de90  __mspabi_slli_10              
-0000de8e  __mspabi_slli_11              
-0000de8c  __mspabi_slli_12              
-0000de8a  __mspabi_slli_13              
-0000de88  __mspabi_slli_14              
-0000de86  __mspabi_slli_15              
-0000dea0  __mspabi_slli_2               
-0000de9e  __mspabi_slli_3               
-0000de9c  __mspabi_slli_4               
-0000de9a  __mspabi_slli_5               
-0000de98  __mspabi_slli_6               
-0000de96  __mspabi_slli_7               
-0000de94  __mspabi_slli_8               
-0000de92  __mspabi_slli_9               
-0000dd14  __mspabi_slll_1               
-0000dcf0  __mspabi_slll_10              
-0000dcec  __mspabi_slll_11              
-0000dce8  __mspabi_slll_12              
-0000dce4  __mspabi_slll_13              
-0000dce0  __mspabi_slll_14              
-0000dcdc  __mspabi_slll_15              
-0000dd10  __mspabi_slll_2               
-0000dd0c  __mspabi_slll_3               
-0000dd08  __mspabi_slll_4               
-0000dd04  __mspabi_slll_5               
-0000dd00  __mspabi_slll_6               
-0000dcfc  __mspabi_slll_7               
-0000dcf8  __mspabi_slll_8               
-0000dcf4  __mspabi_slll_9               
-0000dcd6  __mspabi_sral_1               
-0000dcb2  __mspabi_sral_10              
-0000dcae  __mspabi_sral_11              
-0000dcaa  __mspabi_sral_12              
-0000dca6  __mspabi_sral_13              
-0000dca2  __mspabi_sral_14              
-0000dc9e  __mspabi_sral_15              
-0000dcd2  __mspabi_sral_2               
-0000dcce  __mspabi_sral_3               
-0000dcca  __mspabi_sral_4               
-0000dcc6  __mspabi_sral_5               
-0000dcc2  __mspabi_sral_6               
-0000dcbe  __mspabi_sral_7               
-0000dcba  __mspabi_sral_8               
-0000dcb6  __mspabi_sral_9               
-0000dac4  __mspabi_srli                 
-0000db0a  __mspabi_srli_1               
-0000dae6  __mspabi_srli_10              
-0000dae2  __mspabi_srli_11              
-0000dade  __mspabi_srli_12              
-0000dada  __mspabi_srli_13              
-0000dad6  __mspabi_srli_14              
-0000dad2  __mspabi_srli_15              
-0000db06  __mspabi_srli_2               
-0000db02  __mspabi_srli_3               
-0000dafe  __mspabi_srli_4               
-0000dafa  __mspabi_srli_5               
-0000daf6  __mspabi_srli_6               
-0000daf2  __mspabi_srli_7               
-0000daee  __mspabi_srli_8               
-0000daea  __mspabi_srli_9               
-0000d9c0  __mspabi_srll_1               
-0000d98a  __mspabi_srll_10              
-0000d984  __mspabi_srll_11              
-0000d97e  __mspabi_srll_12              
-0000d978  __mspabi_srll_13              
-0000d972  __mspabi_srll_14              
-0000d96c  __mspabi_srll_15              
-0000d9ba  __mspabi_srll_2               
-0000d9b4  __mspabi_srll_3               
-0000d9ae  __mspabi_srll_4               
-0000d9a8  __mspabi_srll_5               
-0000d9a2  __mspabi_srll_6               
-0000d99c  __mspabi_srll_7               
-0000d996  __mspabi_srll_8               
-0000d990  __mspabi_srll_9               
-0000e086  _c_int00_noargs               
+0000d9de  __mspabi_divli                
+0000de0c  __mspabi_divu                 
+0000d748  __mspabi_divul                
+0000deb2  __mspabi_func_epilog_1        
+0000deb0  __mspabi_func_epilog_2        
+0000deae  __mspabi_func_epilog_3        
+0000deac  __mspabi_func_epilog_4        
+0000deaa  __mspabi_func_epilog_5        
+0000dea8  __mspabi_func_epilog_6        
+0000dea6  __mspabi_func_epilog_7        
+0000de4a  __mspabi_mpyi                 
+0000de4a  __mspabi_mpyi_sw              
+0000dcf0  __mspabi_mpyl                 
+0000dcf0  __mspabi_mpyl_sw              
+0000ddf6  __mspabi_mpysl                
+0000ddf6  __mspabi_mpysl_sw             
+0000dd5a  __mspabi_mpyul                
+0000dd5a  __mspabi_mpyul_sw             
+0000d9de  __mspabi_remli                
+0000de0c  __mspabi_remu                 
+0000d748  __mspabi_remul                
+0000dbce  __mspabi_slli                 
+0000dbf6  __mspabi_slli_1               
+0000dbe4  __mspabi_slli_10              
+0000dbe2  __mspabi_slli_11              
+0000dbe0  __mspabi_slli_12              
+0000dbde  __mspabi_slli_13              
+0000dbdc  __mspabi_slli_14              
+0000dbda  __mspabi_slli_15              
+0000dbf4  __mspabi_slli_2               
+0000dbf2  __mspabi_slli_3               
+0000dbf0  __mspabi_slli_4               
+0000dbee  __mspabi_slli_5               
+0000dbec  __mspabi_slli_6               
+0000dbea  __mspabi_slli_7               
+0000dbe8  __mspabi_slli_8               
+0000dbe6  __mspabi_slli_9               
+0000da94  __mspabi_slll_1               
+0000da70  __mspabi_slll_10              
+0000da6c  __mspabi_slll_11              
+0000da68  __mspabi_slll_12              
+0000da64  __mspabi_slll_13              
+0000da60  __mspabi_slll_14              
+0000da5c  __mspabi_slll_15              
+0000da90  __mspabi_slll_2               
+0000da8c  __mspabi_slll_3               
+0000da88  __mspabi_slll_4               
+0000da84  __mspabi_slll_5               
+0000da80  __mspabi_slll_6               
+0000da7c  __mspabi_slll_7               
+0000da78  __mspabi_slll_8               
+0000da74  __mspabi_slll_9               
+0000da56  __mspabi_sral_1               
+0000da32  __mspabi_sral_10              
+0000da2e  __mspabi_sral_11              
+0000da2a  __mspabi_sral_12              
+0000da26  __mspabi_sral_13              
+0000da22  __mspabi_sral_14              
+0000da1e  __mspabi_sral_15              
+0000da52  __mspabi_sral_2               
+0000da4e  __mspabi_sral_3               
+0000da4a  __mspabi_sral_4               
+0000da46  __mspabi_sral_5               
+0000da42  __mspabi_sral_6               
+0000da3e  __mspabi_sral_7               
+0000da3a  __mspabi_sral_8               
+0000da36  __mspabi_sral_9               
+0000d844  __mspabi_srli                 
+0000d88a  __mspabi_srli_1               
+0000d866  __mspabi_srli_10              
+0000d862  __mspabi_srli_11              
+0000d85e  __mspabi_srli_12              
+0000d85a  __mspabi_srli_13              
+0000d856  __mspabi_srli_14              
+0000d852  __mspabi_srli_15              
+0000d886  __mspabi_srli_2               
+0000d882  __mspabi_srli_3               
+0000d87e  __mspabi_srli_4               
+0000d87a  __mspabi_srli_5               
+0000d876  __mspabi_srli_6               
+0000d872  __mspabi_srli_7               
+0000d86e  __mspabi_srli_8               
+0000d86a  __mspabi_srli_9               
+0000d740  __mspabi_srll_1               
+0000d70a  __mspabi_srll_10              
+0000d704  __mspabi_srll_11              
+0000d6fe  __mspabi_srll_12              
+0000d6f8  __mspabi_srll_13              
+0000d6f2  __mspabi_srll_14              
+0000d6ec  __mspabi_srll_15              
+0000d73a  __mspabi_srll_2               
+0000d734  __mspabi_srll_3               
+0000d72e  __mspabi_srll_4               
+0000d728  __mspabi_srll_5               
+0000d722  __mspabi_srll_6               
+0000d71c  __mspabi_srll_7               
+0000d716  __mspabi_srll_8               
+0000d710  __mspabi_srll_9               
+0000ddda  _c_int00_noargs               
 0000fffe  _reset_vector                 
 000003b0  _stack                        
-0000e1f6  _system_post_cinit            
-0000e1f2  _system_pre_init              
-0000e1ec  abort                         
-0000e04a  delay                         
-0000c9a6  fft32                         
-0000db56  fft_magnitude                 
-00000340  g_freq_hz                     
-00000346  g_freq_period                 
-00000344  g_freq_ready                  
-0000cc7e  main                          
-0000e140  memcpy                        
-0000e162  strcpy                        
-0000e180  strlen                        
+0000df4a  _system_post_cinit            
+0000df46  _system_pre_init              
+0000df40  abort                         
+0000dd9e  delay                         
+0000c7ee  fft32                         
+0000d8d6  fft_magnitude                 
+0000032c  g_freq_hz                     
+00000332  g_freq_period                 
+00000330  g_freq_ready                  
+0000cac6  main                          
+0000de94  memcpy                        
+0000deb6  strcpy                        
+0000ded4  strlen                        
 
 
 GLOBAL SYMBOLS: SORTED BY Symbol Address 
@@ -672,9 +667,9 @@ address   name
 000001b2  ADC10CTL1                     
 000001b4  ADC10MEM                      
 000001bc  ADC10SA                       
-00000340  g_freq_hz                     
-00000344  g_freq_ready                  
-00000346  g_freq_period                 
+0000032c  g_freq_hz                     
+00000330  g_freq_ready                  
+00000332  g_freq_period                 
 000003b0  _stack                        
 00000400  __STACK_END                   
 000010c0  TLV_CHECKSUM                  
@@ -690,165 +685,163 @@ address   name
 000010fd  CALBC1_8MHZ                   
 000010fe  CALDCO_1MHZ                   
 000010ff  CALBC1_1MHZ                   
-0000c438  ADC_measureVpp                
-0000c9a6  fft32                         
-0000cb48  LCD_showGB2312Str             
-0000cc7e  main                          
-0000ceb8  LCD_drawBars                  
-0000cfc8  ADC_sampleToBufferAdaptive    
-0000d0bc  LCD_showUint                  
-0000d404  LCD_init                      
-0000d4ba  GPIO_pinMode                  
-0000d558  LCD_getAndWrite16x16          
-0000d5d4  __TI_decompress_lzss          
-0000d650  UART_sendNum                  
-0000d6ca  LCD_getAndWrite8x16           
-0000d742  Timer0_A0_ISR                 
-0000d7b8  LCD_showMeasure               
-0000d828  LCD_writeCmd                  
-0000d898  LCD_writeData                 
-0000d96c  __mspabi_srll_15              
-0000d972  __mspabi_srll_14              
-0000d978  __mspabi_srll_13              
-0000d97e  __mspabi_srll_12              
-0000d984  __mspabi_srll_11              
-0000d98a  __mspabi_srll_10              
-0000d990  __mspabi_srll_9               
-0000d996  __mspabi_srll_8               
-0000d99c  __mspabi_srll_7               
-0000d9a2  __mspabi_srll_6               
-0000d9a8  __mspabi_srll_5               
-0000d9ae  __mspabi_srll_4               
-0000d9b4  __mspabi_srll_3               
-0000d9ba  __mspabi_srll_2               
-0000d9c0  __mspabi_srll_1               
-0000d9c8  __mspabi_divul                
-0000d9c8  __mspabi_remul                
-0000da78  LCD_sendCmdToROM              
-0000dac4  __mspabi_srli                 
-0000dad2  __mspabi_srli_15              
-0000dad6  __mspabi_srli_14              
-0000dada  __mspabi_srli_13              
-0000dade  __mspabi_srli_12              
-0000dae2  __mspabi_srli_11              
-0000dae6  __mspabi_srli_10              
-0000daea  __mspabi_srli_9               
-0000daee  __mspabi_srli_8               
-0000daf2  __mspabi_srli_7               
-0000daf6  __mspabi_srli_6               
-0000dafa  __mspabi_srli_5               
-0000dafe  __mspabi_srli_4               
-0000db02  __mspabi_srli_3               
-0000db06  __mspabi_srli_2               
-0000db0a  __mspabi_srli_1               
-0000db10  LCD_clear                     
-0000db56  fft_magnitude                 
-0000db9a  ADC_sampleToBuffer            
-0000dbdc  __TI_auto_init_nobinit_nopinit
-0000dc5e  __mspabi_divli                
-0000dc5e  __mspabi_remli                
-0000dc9e  __mspabi_sral_15              
-0000dca2  __mspabi_sral_14              
-0000dca6  __mspabi_sral_13              
-0000dcaa  __mspabi_sral_12              
-0000dcae  __mspabi_sral_11              
-0000dcb2  __mspabi_sral_10              
-0000dcb6  __mspabi_sral_9               
-0000dcba  __mspabi_sral_8               
-0000dcbe  __mspabi_sral_7               
-0000dcc2  __mspabi_sral_6               
-0000dcc6  __mspabi_sral_5               
-0000dcca  __mspabi_sral_4               
-0000dcce  __mspabi_sral_3               
-0000dcd2  __mspabi_sral_2               
-0000dcd6  __mspabi_sral_1               
-0000dcdc  __mspabi_slll_15              
-0000dce0  __mspabi_slll_14              
-0000dce4  __mspabi_slll_13              
-0000dce8  __mspabi_slll_12              
-0000dcec  __mspabi_slll_11              
-0000dcf0  __mspabi_slll_10              
-0000dcf4  __mspabi_slll_9               
-0000dcf8  __mspabi_slll_8               
-0000dcfc  __mspabi_slll_7               
-0000dd00  __mspabi_slll_6               
-0000dd04  __mspabi_slll_5               
-0000dd08  __mspabi_slll_4               
-0000dd0c  __mspabi_slll_3               
-0000dd10  __mspabi_slll_2               
-0000dd14  __mspabi_slll_1               
-0000dd90  LCD_clearPages                
-0000ddc4  Display_refresh               
-0000ddf6  Capture_startFreq             
-0000de22  LCD_drawDot                   
-0000de4e  __mspabi_divi                 
-0000de4e  __mspabi_remi                 
-0000de7a  __mspabi_slli                 
-0000de86  __mspabi_slli_15              
-0000de88  __mspabi_slli_14              
-0000de8a  __mspabi_slli_13              
-0000de8c  __mspabi_slli_12              
-0000de8e  __mspabi_slli_11              
-0000de90  __mspabi_slli_10              
-0000de92  __mspabi_slli_9               
-0000de94  __mspabi_slli_8               
-0000de96  __mspabi_slli_7               
-0000de98  __mspabi_slli_6               
-0000de9a  __mspabi_slli_5               
-0000de9c  __mspabi_slli_4               
-0000de9e  __mspabi_slli_3               
-0000dea0  __mspabi_slli_2               
-0000dea2  __mspabi_slli_1               
-0000dea6  GPIO_pinWrite                 
-0000ded0  LCD_setAddr                   
-0000defa  UART_init                     
-0000df76  GPIO_pinRead                  
-0000df9c  __mspabi_mpyl                 
-0000df9c  __mspabi_mpyl_sw              
-0000dfc2  Key_init                      
-0000dfe4  Port_1_ISR                    
-0000e006  __mspabi_mpyul                
-0000e006  __mspabi_mpyul_sw             
-0000e04a  delay                         
-0000e06a  Clock_init                    
-0000e086  _c_int00_noargs               
-0000e0a2  __mspabi_mpysl                
-0000e0a2  __mspabi_mpysl_sw             
-0000e0b8  __mspabi_divu                 
-0000e0b8  __mspabi_remu                 
-0000e0ce  Capture_init                  
-0000e0e2  __TI_zero_init_nomemset       
-0000e0f6  __mspabi_mpyi                 
-0000e0f6  __mspabi_mpyi_sw              
-0000e10a  Key_getEvent                  
-0000e10a  Key_scan                      
-0000e11c  UART_sendStr                  
-0000e12e  __TI_decompress_none          
-0000e140  memcpy                        
-0000e152  __mspabi_func_epilog_7        
-0000e154  __mspabi_func_epilog_6        
-0000e156  __mspabi_func_epilog_5        
-0000e158  __mspabi_func_epilog_4        
-0000e15a  __mspabi_func_epilog_3        
-0000e15c  __mspabi_func_epilog_2        
-0000e15e  __mspabi_func_epilog_1        
-0000e162  strcpy                        
-0000e180  strlen                        
-0000e18e  Display_toggleSubMode         
-0000e19a  UART_sendChar                 
-0000e1ca  Display_init                  
-0000e1d4  ADC_init                      
-0000e1dc  Capture_stopFreq              
-0000e1e4  __TI_ISR_TRAP                 
-0000e1ec  C$$EXIT                       
-0000e1ec  abort                         
-0000e1f2  _system_pre_init              
-0000e1f6  _system_post_cinit            
-0000e414  __TI_Handler_Table_Base       
-0000e41a  __TI_Handler_Table_Limit      
-0000e41e  __TI_CINIT_Base               
-0000e426  __TI_CINIT_Limit              
-0000e426  __TI_CINIT_Warm               
+0000c000  ADC_measureVpp                
+0000c7ee  fft32                         
+0000c990  LCD_showGB2312Str             
+0000cac6  main                          
+0000cd00  LCD_drawBars                  
+0000ce10  ADC_sampleToBufferAdaptive    
+0000cf04  LCD_showUint                  
+0000d184  LCD_init                      
+0000d23a  GPIO_pinMode                  
+0000d2d8  LCD_getAndWrite16x16          
+0000d354  __TI_decompress_lzss          
+0000d3d0  UART_sendNum                  
+0000d44a  LCD_getAndWrite8x16           
+0000d4c2  Timer0_A0_ISR                 
+0000d538  LCD_showMeasure               
+0000d5a8  LCD_writeCmd                  
+0000d618  LCD_writeData                 
+0000d6ec  __mspabi_srll_15              
+0000d6f2  __mspabi_srll_14              
+0000d6f8  __mspabi_srll_13              
+0000d6fe  __mspabi_srll_12              
+0000d704  __mspabi_srll_11              
+0000d70a  __mspabi_srll_10              
+0000d710  __mspabi_srll_9               
+0000d716  __mspabi_srll_8               
+0000d71c  __mspabi_srll_7               
+0000d722  __mspabi_srll_6               
+0000d728  __mspabi_srll_5               
+0000d72e  __mspabi_srll_4               
+0000d734  __mspabi_srll_3               
+0000d73a  __mspabi_srll_2               
+0000d740  __mspabi_srll_1               
+0000d748  __mspabi_divul                
+0000d748  __mspabi_remul                
+0000d7f8  LCD_sendCmdToROM              
+0000d844  __mspabi_srli                 
+0000d852  __mspabi_srli_15              
+0000d856  __mspabi_srli_14              
+0000d85a  __mspabi_srli_13              
+0000d85e  __mspabi_srli_12              
+0000d862  __mspabi_srli_11              
+0000d866  __mspabi_srli_10              
+0000d86a  __mspabi_srli_9               
+0000d86e  __mspabi_srli_8               
+0000d872  __mspabi_srli_7               
+0000d876  __mspabi_srli_6               
+0000d87a  __mspabi_srli_5               
+0000d87e  __mspabi_srli_4               
+0000d882  __mspabi_srli_3               
+0000d886  __mspabi_srli_2               
+0000d88a  __mspabi_srli_1               
+0000d890  LCD_clear                     
+0000d8d6  fft_magnitude                 
+0000d91a  ADC_sampleToBuffer            
+0000d95c  __TI_auto_init_nobinit_nopinit
+0000d9de  __mspabi_divli                
+0000d9de  __mspabi_remli                
+0000da1e  __mspabi_sral_15              
+0000da22  __mspabi_sral_14              
+0000da26  __mspabi_sral_13              
+0000da2a  __mspabi_sral_12              
+0000da2e  __mspabi_sral_11              
+0000da32  __mspabi_sral_10              
+0000da36  __mspabi_sral_9               
+0000da3a  __mspabi_sral_8               
+0000da3e  __mspabi_sral_7               
+0000da42  __mspabi_sral_6               
+0000da46  __mspabi_sral_5               
+0000da4a  __mspabi_sral_4               
+0000da4e  __mspabi_sral_3               
+0000da52  __mspabi_sral_2               
+0000da56  __mspabi_sral_1               
+0000da5c  __mspabi_slll_15              
+0000da60  __mspabi_slll_14              
+0000da64  __mspabi_slll_13              
+0000da68  __mspabi_slll_12              
+0000da6c  __mspabi_slll_11              
+0000da70  __mspabi_slll_10              
+0000da74  __mspabi_slll_9               
+0000da78  __mspabi_slll_8               
+0000da7c  __mspabi_slll_7               
+0000da80  __mspabi_slll_6               
+0000da84  __mspabi_slll_5               
+0000da88  __mspabi_slll_4               
+0000da8c  __mspabi_slll_3               
+0000da90  __mspabi_slll_2               
+0000da94  __mspabi_slll_1               
+0000db10  LCD_clearPages                
+0000db44  Display_refresh               
+0000db76  Capture_startFreq             
+0000dba2  LCD_drawDot                   
+0000dbce  __mspabi_slli                 
+0000dbda  __mspabi_slli_15              
+0000dbdc  __mspabi_slli_14              
+0000dbde  __mspabi_slli_13              
+0000dbe0  __mspabi_slli_12              
+0000dbe2  __mspabi_slli_11              
+0000dbe4  __mspabi_slli_10              
+0000dbe6  __mspabi_slli_9               
+0000dbe8  __mspabi_slli_8               
+0000dbea  __mspabi_slli_7               
+0000dbec  __mspabi_slli_6               
+0000dbee  __mspabi_slli_5               
+0000dbf0  __mspabi_slli_4               
+0000dbf2  __mspabi_slli_3               
+0000dbf4  __mspabi_slli_2               
+0000dbf6  __mspabi_slli_1               
+0000dbfa  GPIO_pinWrite                 
+0000dc24  LCD_setAddr                   
+0000dc4e  UART_init                     
+0000dcca  GPIO_pinRead                  
+0000dcf0  __mspabi_mpyl                 
+0000dcf0  __mspabi_mpyl_sw              
+0000dd16  Key_init                      
+0000dd38  Port_1_ISR                    
+0000dd5a  __mspabi_mpyul                
+0000dd5a  __mspabi_mpyul_sw             
+0000dd9e  delay                         
+0000ddbe  Clock_init                    
+0000ddda  _c_int00_noargs               
+0000ddf6  __mspabi_mpysl                
+0000ddf6  __mspabi_mpysl_sw             
+0000de0c  __mspabi_divu                 
+0000de0c  __mspabi_remu                 
+0000de22  Capture_init                  
+0000de36  __TI_zero_init_nomemset       
+0000de4a  __mspabi_mpyi                 
+0000de4a  __mspabi_mpyi_sw              
+0000de5e  Key_getEvent                  
+0000de5e  Key_scan                      
+0000de70  UART_sendStr                  
+0000de82  __TI_decompress_none          
+0000de94  memcpy                        
+0000dea6  __mspabi_func_epilog_7        
+0000dea8  __mspabi_func_epilog_6        
+0000deaa  __mspabi_func_epilog_5        
+0000deac  __mspabi_func_epilog_4        
+0000deae  __mspabi_func_epilog_3        
+0000deb0  __mspabi_func_epilog_2        
+0000deb2  __mspabi_func_epilog_1        
+0000deb6  strcpy                        
+0000ded4  strlen                        
+0000dee2  Display_toggleSubMode         
+0000deee  UART_sendChar                 
+0000df1e  Display_init                  
+0000df28  ADC_init                      
+0000df30  Capture_stopFreq              
+0000df38  __TI_ISR_TRAP                 
+0000df40  C$$EXIT                       
+0000df40  abort                         
+0000df46  _system_pre_init              
+0000df4a  _system_post_cinit            
+0000e18e  __TI_Handler_Table_Base       
+0000e194  __TI_Handler_Table_Limit      
+0000e198  __TI_CINIT_Base               
+0000e1a0  __TI_CINIT_Limit              
+0000e1a0  __TI_CINIT_Warm               
 0000ffe0  __TI_int00                    
 0000ffe4  __TI_int02                    
 0000ffe6  __TI_int03                    
@@ -868,4 +861,4 @@ ffffffff  __TI_prof_data_size
 ffffffff  __TI_prof_data_start          
 ffffffff  __c_args__                    
 
-[281 symbols]
+[279 symbols]
