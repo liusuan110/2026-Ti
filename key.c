@@ -8,6 +8,7 @@
 
 /* 按键事件标志 (ISR置位, 主循环读取并清零) */
 static volatile uint8_t g_key_event_flags = 0;
+static volatile uint8_t g_key_locked = 0;
 
 /* 初始化: P1.3 设为内部上拉输入 + 端口中断 */
 void Key_init(void)
@@ -46,6 +47,10 @@ uint8_t Key_getEvent(void)
  */
 uint8_t Key_scan(void)
 {
+    /* 松手后解锁，确保每次按下只产生一次事件 */
+    if ((g_key_locked != 0U) && ((P1IN & KEY1_BIT) != 0U)) {
+        g_key_locked = 0U;
+    }
     return Key_getEvent();
 }
 
@@ -53,9 +58,9 @@ uint8_t Key_scan(void)
 __interrupt void Port_1_ISR(void)
 {
     if (P1IFG & KEY1_BIT) {
-        __delay_cycles(160000); /* 16MHz下约10ms消抖 */
-        if ((P1IN & KEY1_BIT) == 0) {
+        if ((g_key_locked == 0U) && ((P1IN & KEY1_BIT) == 0U)) {
             g_key_event_flags |= KEY_1_SHORT;
+            g_key_locked = 1U;
         }
         P1IFG &= ~KEY1_BIT;
     }

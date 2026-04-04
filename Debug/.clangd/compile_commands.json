@@ -47,11 +47,11 @@
    {
       "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
       "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
-      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/display.c"
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/uart.c"
    },
    {
       "directory" : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/Debug",
       "command"   : "clang++ -I\"C:/TI/ccs2020/ccs/ccs_base/msp430/include\" -I\"C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test\" -I\"C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include\" -D__MSP430G2553__ -xc",
-      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/uart.c"
+      "file"      : "C:/Users/lenovo/workspace_ccstheia/G2553_JLX12864G_Test/display.c"
    }
 ]

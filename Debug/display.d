@@ -24,7 +24,6 @@ display.obj: ../lcd_draw.h
 display.obj: ../adc_measure.h
 display.obj: ../timer_capture.h
 display.obj: ../fft.h
-display.obj: ../uart.h
 
 ../display.c:
 
@@ -73,6 +72,4 @@ C:/TI/ccs2020/ccs/tools/compiler/ti-cgt-msp430_21.6.1.LTS/include/intrinsics_leg
 ../timer_capture.h:
 
 ../fft.h:
-
-../uart.h:
 

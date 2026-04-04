@@ -8,20 +8,23 @@
 
 void UART_init(void)
 {
-    /* Use P1.2 as TXD. P1.1 is RXD, but currently used as Timer Capture */
+    /* Use P1.2 as TXD. Pre-drive HIGH and set as output to avoid startup glitches */
+    P1OUT |= BIT2;
+    P1DIR |= BIT2;
     P1SEL |= BIT2;   
     P1SEL2 |= BIT2;  
 
     UCA0CTL1 |= UCSWRST;      /* Put USCI in reset */
+    UCA0CTL0 = 0;             /* No parity, LSB first, 8-bit, 1 stop bit, UART */
     UCA0CTL1 |= UCSSEL_2;     /* SMCLK (16MHz) */
     
-    /* 16MHz / 9600 = 1666.66 => 1666 */
-    /* Modulation: 0.66 * 8 = 5 => UCBRSx = 5 */
-    // UCA0BR1 = 1666 / 256 = 6; UCA0BR0 = 1666 % 256 = 130
-    UCA0BR0 = 130;
-    UCA0BR1 = 6;
-    UCA0MCTL = UCBRS_5;
-    
+    /* 16MHz / 9600 = 1666.666; N = 1666 > 16, so highly recommended to use UCOS16=1 */
+    /* Prescaler divided by 16: 1666 / 16 = 104 -> UCA0BR0=104, UCA0BR1=0 */
+    /* Fraction: 0.1666 * 16 = 2.666 -> UCBRF=2, UCBRS=1 (from TI User Guide Table) */
+    UCA0BR0 = 104;
+    UCA0BR1 = 0;
+    UCA0MCTL = 0x20 | 0x02 | UCOS16; /* UCBRF_2 (0x20) | UCBRS_1 (0x02) | UCOS16 */
+
     UCA0CTL1 &= ~UCSWRST;     /* Release USCI from reset */
 }
 
