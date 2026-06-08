@@ -1,0 +1,42 @@
+# Vivado/XSim generated files
+*.xpr
+*.jou
+*.log
+*.pb
+*.wdb
+*.str
+*.zip
+*.backup.jou
+*.backup.log
+xsim.dir/
+.Xil/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.gen/
+*.data/
+project_1.cache/
+project_1.hw/
+project_1.ip_user_files/
+project_1.srcs/
+
+# Local/private source documents and extracted third-party material
+private/
+docs/nc2023d_extracted.md
+docs/nc2023d_pdf_text_reextract.txt
+docs/manual_images/
+
+# Generated simulation vectors and outputs
+outputs/
+sim/*.mem
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
