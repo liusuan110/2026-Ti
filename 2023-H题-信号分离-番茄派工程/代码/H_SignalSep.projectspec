@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectSpec>
+    <applicability>
+        <when>
+            <context deviceFamily="ARM" deviceId="MSPM0G3507" />
+        </when>
+    </applicability>
+
+    <project
+        title="H_SignalSep"
+        name="H_SignalSep_LP_MSPM0G3507_nortos_ticlang"
+        configurations="Debug"
+        toolChain="TICLANG"
+        connection="TIXDS110_Connection.xml"
+        device="MSPM0G3507"
+        ignoreDefaultDeviceSettings="true"
+        ignoreDefaultCCSSettings="true"
+        products="MSPM0-SDK;sysconfig"
+        compilerBuildOptions="
+            -I${PROJECT_ROOT}
+            -I${PROJECT_ROOT}/app
+            -I${PROJECT_ROOT}/User
+            -I${PROJECT_ROOT}/${ConfigName}
+            -DARM_MATH_CM0
+            -O2
+            @device.opt
+            -I${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/third_party/CMSIS/Core/Include
+            -I${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/third_party/CMSIS/DSP/Include
+            -I${COM_TI_MSPM0_SDK_INSTALL_DIR}/source
+            -gdwarf-3
+            -mcpu=cortex-m0plus
+            -march=thumbv6m
+            -mfloat-abi=soft
+            -mthumb
+            -Wall
+        "
+        linkerBuildOptions="
+            -ldevice.cmd.genlibs
+            -L${COM_TI_MSPM0_SDK_INSTALL_DIR}/source
+            ${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/third_party/CMSIS/DSP/lib/ticlang/m0p/arm_cortexM0l_math.a
+            -L${PROJECT_ROOT}
+            -L${PROJECT_BUILD_DIR}/syscfg
+            -Wl,--rom_model
+            -Wl,--warn_sections
+            -L${CG_TOOL_ROOT}/lib
+            -llibc.a
+        "
+        sysConfigBuildOptions="
+            --output .
+            --product ${COM_TI_MSPM0_SDK_INSTALL_DIR}/.metadata/product.json
+            --compiler ticlang
+        "
+        sourceLookupPath="${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/ti/driverlib"
+        description="2023 H题 信号分离装置 - 番茄派 MSPM0G3507 (再生法: FFT分析 + AD9959重建 + 软件PLL)">
+
+        <property name="buildProfile" value="release"/>
+        <property name="isHybrid" value="true"/>
+
+        <file path="main.c"             openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="H_SignalSep.syscfg" openOnCreation="true"  excludeFromBuild="false" action="copy"> </file>
+
+        <file path="app/h_config.h"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/mathacl_util.h"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/mathacl_util.c"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_acq.h"       openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_acq.c"       openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_analysis.h"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_analysis.c"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/reconstruct.h"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/reconstruct.c"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pll.h"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pll.c"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/h_app.h"         openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/h_app.c"         openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+
+        <file path="User/AD9959.h"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/AD9959.c"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/DDS.h"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/DDS.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/Tick.h"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/Tick.c"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/UserTask.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="User/UserTask.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+    </project>
+</projectSpec>
