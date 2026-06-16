@@ -9,8 +9,8 @@
 
 #define H_CAP_N   ((uint16_t)H_FFT_N)
 
-/* 大缓冲全局, 不放栈 */
-static uint16_t   s_buf[H_CAP_N];
+/* 大缓冲全局, 不放栈; 4 字节对齐(ADC DMA 按 32 位字写入) */
+static uint16_t   s_buf[H_CAP_N] __attribute__((aligned(4)));
 static h_result_t s_res;
 static pll_t      s_pll[H_NUM_SIGNALS];
 static uint8_t    s_built = 0U;
@@ -18,7 +18,7 @@ static uint8_t    s_built = 0U;
 void H_App_init(void)
 {
     MathUtil_init();        /* MATHACL 上电(.syscfg 未配, 手动) */
-    SigAcq_init();          /* ADC0 */
+    SigAcq_init();          /* ADC0 + FIFO + DMA */
     SigAnalysis_init();
     Reconstruct_init();     /* AD9959 (DDS_init) */
 
