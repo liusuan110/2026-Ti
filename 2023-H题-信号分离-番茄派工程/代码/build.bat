@@ -33,6 +33,7 @@ echo ===== COMPILE ===== >> "%LOG%"
 %CLANG% -c %FLAGS% %INCS% -o mathacl_util.o "%PROJ%app\mathacl_util.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o sig_acq.o      "%PROJ%app\sig_acq.c"     >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o sig_analysis.o "%PROJ%app\sig_analysis.c" >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o sig_analysis_core.o "%PROJ%app\sig_analysis_core.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o reconstruct.o  "%PROJ%app\reconstruct.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o pll.o          "%PROJ%app\pll.c"         >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o h_app.o        "%PROJ%app\h_app.c"       >> "%LOG%" 2>&1
@@ -40,7 +41,7 @@ echo ===== COMPILE ===== >> "%LOG%"
 %CLANG% -c %FLAGS% %INCS% -o startup.o "%SDK%\source\ti\devices\msp\m0p\startup_system_files\ticlang\startup_mspm0g350x_ticlang.c" >> "%LOG%" 2>&1
 
 echo ===== LINK ===== >> "%LOG%"
-%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o UserTask.o mathacl_util.o sig_acq.o sig_analysis.o reconstruct.o pll.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
+%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o UserTask.o mathacl_util.o sig_acq.o sig_analysis.o sig_analysis_core.o reconstruct.o pll.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
 echo ===== RESULT ===== >> "%LOG%"
 dir h.out >> "%LOG%" 2>&1
 echo BAT_DONE

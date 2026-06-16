@@ -66,6 +66,8 @@
         <file path="app/sig_acq.c"       openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/sig_analysis.h"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/sig_analysis.c"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_analysis_core.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/sig_analysis_core.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/reconstruct.h"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/reconstruct.c"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.h"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
