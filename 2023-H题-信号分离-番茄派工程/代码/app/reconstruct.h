@@ -6,7 +6,7 @@
 #include "reconstruct_core.h"
 
 /* 用 AD9959 重建 A'/B' (再生法). idx: 0->A'(CH0), 1->B'(CH1).
- * 三角波: AD9959 只出正弦, 三角靠硬件(比较器整型->积分器), 见 硬件/README. */
+ * 三角波: AD9959 只出正弦, 三角靠硬件(比较器整型->积分器), 见 上板联调清单.md. */
 
 void Reconstruct_init(void);
 void Reconstruct_set(uint8_t idx, const h_sig_t *sig);     /* 按分析结果建一路 */
