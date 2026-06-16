@@ -1,6 +1,7 @@
 #include "sig_analysis.h"
 #include "sig_analysis_core.h"
 #include "mathacl_util.h"
+#include "hann1024.h"
 #include "arm_math.h"
 #include "arm_const_structs.h"
 
@@ -10,7 +11,7 @@ static uint16_t s_mag[H_FFT_N / 2u];        /* 半谱幅度 (1KB) */
 
 void SigAnalysis_init(void)
 {
-    /* 预留: 窗函数表等(当前用矩形窗 + 抛物线插值) */
+    /* 窗函数表 hann1024 为编译期常量, 无需初始化 */
 }
 
 uint8_t SigAnalysis_run(const uint16_t *buf, uint16_t n, h_result_t *res)
@@ -19,9 +20,11 @@ uint8_t SigAnalysis_run(const uint16_t *buf, uint16_t n, h_result_t *res)
     uint16_t nn    = (n < (uint16_t)H_FFT_N) ? n : (uint16_t)H_FFT_N;
     const uint16_t nhalf = (uint16_t)(H_FFT_N / 2u);
 
-    /* 1) 转 q15 交错复数, 去直流(减 2048), 左移放大到 q15 量级 */
+    /* 1) 去直流(减 2048) -> 乘汉宁窗(Q15) -> 左移到 q15 量级, 存交错复数 */
     for (i = 0u; i < nn; i++) {
-        s_fft[2u * i]      = (q15_t)(((int32_t)buf[i] - 2048) << 4);
+        int32_t centered = (int32_t)buf[i] - 2048;
+        int32_t windowed = (centered * (int32_t)hann1024[i]) >> 15; /* ×Hann */
+        s_fft[2u * i]      = (q15_t)(windowed << 4);
         s_fft[2u * i + 1u] = 0;
     }
     for (; i < (uint16_t)H_FFT_N; i++) {
@@ -33,7 +36,7 @@ uint8_t SigAnalysis_run(const uint16_t *buf, uint16_t n, h_result_t *res)
     arm_cfft_q15(&arm_cfft_sR_q15_len1024, s_fft, 0, 1);
     arm_cmplx_mag_q15(s_fft, (q15_t *)s_mag, nhalf);
 
-    /* 3) 算法核: 两路 频率/幅度/波形 */
+    /* 3) 算法核: 两路 频率/幅度/波形(抛物线插值在汉宁窗下精度更高) */
     SigCore_analyze(s_mag, nhalf, (uint32_t)H_ADC_FS_HZ, res);
 
     /* 4) 相位: 峰值 bin 复数 atan2(MATHACL). 由频率反算整数 bin */
