@@ -33,10 +33,12 @@ typedef enum { H_WAVE_SINE = 0, H_WAVE_TRIANGLE = 1 } h_wave_t;
 /* 单路信号分析结果 */
 typedef struct {
     uint32_t freq_hz;     /* 频率 (Hz) */
-    uint16_t amp;         /* 幅度 (FFT 幅值, 相对值) */
+    uint16_t amp;         /* 幅度 (FFT 幅值, 相对值; 谐波重叠时为去污后的值) */
     int32_t  phase_q31;   /* 相位 (MATHACL 归一化角, 满量程对应 ±pi) */
+    uint16_t bin;         /* 峰值所在 FFT bin (ANA-1: 相位取此 bin, 不由频率反算) */
     h_wave_t wave;        /* 波形类型 */
     uint8_t  valid;       /* 是否有效 */
+    uint8_t  overlap;     /* fB≈3fA 谐波重叠标志(此路基波受另一路谐波污染, 已去污估计) */
 } h_sig_t;
 
 /* 整体分析结果: 两路, 按频率升序 [0]=低频A, [1]=高频B */

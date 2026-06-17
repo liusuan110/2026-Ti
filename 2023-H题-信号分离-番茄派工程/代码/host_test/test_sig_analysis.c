@@ -83,15 +83,63 @@ static int check(const char *name, uint32_t fe0, h_wave_t we0, uint32_t fe1, h_w
     return ok;
 }
 
+/* ANA-1: 校验暴露的峰值 bin 与期望一致(fs=1.024M,N=1024 => bin≈f/1000) */
+static int check_bin(const char *name, uint16_t b0e, uint16_t b1e, const h_result_t *r)
+{
+    int ok = (abs((int)r->sig[0].bin - (int)b0e) <= 1) && (abs((int)r->sig[1].bin - (int)b1e) <= 1);
+    printf("[%-20s] bin A=%u(期望%u) B=%u(期望%u) -> %s\n",
+           name, r->sig[0].bin, b0e, r->sig[1].bin, b1e, ok ? "PASS" : "FAIL");
+    return ok;
+}
+
+/* ANA-3: 校验重叠标志 + B 波形(幅度悬殊时, 未去污会把三角 B 误判正弦) */
+static int check_overlap(const char *name, h_wave_t we1, const h_result_t *r)
+{
+    int ok = (r->sig[1].overlap == 1u) && (r->sig[1].wave == we1);
+    printf("[%-20s] overlap=%u B波形=%s(期望%s) -> %s\n",
+           name, r->sig[1].overlap, wn(r->sig[1].wave), wn(we1), ok ? "PASS" : "FAIL");
+    return ok;
+}
+
+/* ANA-2: 校验块归一化移位把峰值拉到 (0.5,1.0] 满量程且不溢出 */
+static int test_normshift(void)
+{
+    uint32_t cases[] = {620u, 2048u, 100u, 1u, 30000u, 0u};
+    int i, ok = 1;
+    printf("--- ANA-2 SigCore_normShift ---\n");
+    for (i = 0; i < (int)(sizeof(cases)/sizeof(cases[0])); i++) {
+        uint32_t m = cases[i];
+        int32_t sh = SigCore_normShift(m);
+        long peak = (long)m << sh;
+        int good;
+        if (m == 0u) { good = (sh == 0); }
+        else { good = (peak <= 32767) && ((peak > 16383) || (sh >= 15)); }  /* 落入(0.5,1.0]或封顶 */
+        printf("  maxabs=%5u -> sh=%2d 峰=%5ld  %s\n", m, sh, peak, good ? "ok" : "BAD");
+        ok = ok && good;
+    }
+    printf("  -> %s\n", ok ? "PASS" : "FAIL");
+    return ok;
+}
+
 int main(void)
 {
     h_result_t r; int pass = 0, total = 0;
     printf("fs=%.0f N=%d fRes=%.1f (汉宁窗)\n", FS, NFFT, FS / NFFT);
     run_case(50000, 0, 600, 0.3, 100000, 0, 600, 1.1, &r); total++; pass += check("50k+100k sine", 50000, H_WAVE_SINE, 100000, H_WAVE_SINE, &r);
+    total++; pass += check_bin("50k+100k bin", 50u, 100u, &r);   /* ANA-1 */
     run_case(10000, 0, 600, 0.0, 30000, 0, 600, 0.5, &r);  total++; pass += check("10k+30k sine(3x)", 10000, H_WAVE_SINE, 30000, H_WAVE_SINE, &r);
     run_case(15000, 1, 600, 0.2, 40000, 0, 600, 0.9, &r);  total++; pass += check("15k tri+40k sine", 15000, H_WAVE_TRIANGLE, 40000, H_WAVE_SINE, &r);
     run_case(20000, 1, 600, 0.0, 60000, 1, 600, 0.4, &r);  total++; pass += check("20k+60k tri(3x)", 20000, H_WAVE_TRIANGLE, 60000, H_WAVE_TRIANGLE, &r);
     run_case(52300, 0, 600, 0.7, 77700, 0, 600, 0.1, &r);  total++; pass += check("52.3k+77.7k off-bin", 52300, H_WAVE_SINE, 77700, H_WAVE_SINE, &r);
+
+    /* ANA-3 谐波重叠去污关键案例: A三角(大) + B正弦(小, 5:1). A的3次谐波淹没B基波,
+     * 未去污时 B 被误判三角; 去污后正确判正弦. (这是审计 ANA-3"幅度悬殊"的真实可解场景) */
+    run_case(20000, 1, 1500, 0.0, 60000, 0, 300, 0.7, &r); total++; pass += check_overlap("20k tri+60k sine(去污)", H_WAVE_SINE, &r);
+    /* A三角 + B三角(轻度差异), 去污不应破坏三角判定 + 标 overlap */
+    run_case(20000, 1, 800, 0.0, 60000, 1, 600, 0.4, &r);  total++; pass += check_overlap("20k tri+60k tri(3x)", H_WAVE_TRIANGLE, &r);
+
+    total++; pass += test_normshift();   /* ANA-2 */
+
     printf("\n==== %d/%d PASS ====\n", pass, total);
     return (pass == total) ? 0 : 1;
 }

@@ -78,13 +78,57 @@ void SigCore_analyze(const uint16_t *mag, uint16_t nhalf, uint32_t fs_hz, h_resu
         res->sig[s].amp     = mag[kf];
         res->sig[s].wave    = classify_harm(mag, kf, nhalf, 3u);
         res->sig[s].phase_q31 = 0;
+        res->sig[s].bin     = kf;     /* ANA-1: 暴露整数峰 bin 供相位 atan2 复用 */
         res->sig[s].valid   = 1u;
+        res->sig[s].overlap = 0u;
     }
 
-    /* fB ≈ 3*fA: A 的 3 次谐波落在 B 的基波上被污染 -> 改用 5 次谐波重判 A */
+    /* fB ≈ 3*fA: A 的 3 次谐波正落在 B 的基波 bin 上 (ANA-3). */
     {
         int diff = (int)k1 - 3 * (int)k0;
         if (diff < 0) { diff = -diff; }
-        if (diff <= 1) { res->sig[0].wave = classify_harm(mag, k0, nhalf, 5u); }
+        if (diff <= 1) {
+            uint16_t est;        /* A 三次谐波在重叠 bin 处的峰值估计 */
+            uint16_t k3;
+
+            /* (1) A 改用 5 次谐波重判(5*k0 不与 B 重叠) */
+            res->sig[0].wave    = classify_harm(mag, k0, nhalf, 5u);
+            res->sig[1].overlap = 1u;
+
+            /* (2) 估 A 的 3 次谐波幅度: 三角波约为基波的 1/9, 正弦≈0 */
+            est = (res->sig[0].wave == H_WAVE_TRIANGLE) ? (uint16_t)(mag[k0] / 9u) : 0u;
+
+            /* (3) 去污 B 幅度: 重叠 bin 幅度减去 A 三次谐波贡献 */
+            res->sig[1].amp = (mag[k1] > est) ? (uint16_t)(mag[k1] - est) : 0u;
+
+            /* (4) 用去污后的 B 基波能量重判 B 波形(对照 B 自身 3 次谐波 3*k1).
+             * 注意 fB=3fA 时, B 的 3 次谐波检测位 3*k1=9*k0 又撞上 A 的 9 次谐波,
+             * 故 p1 扣 A 的 3 次谐波(≈基波/9), p3 扣 A 的 9 次谐波(≈基波/81). */
+            k3 = (uint16_t)(3u * k1);
+            if ((uint16_t)(k3 + 1u) < nhalf) {
+                uint16_t est9 = (res->sig[0].wave == H_WAVE_TRIANGLE) ? (uint16_t)(mag[k0] / 81u) : 0u;
+                uint32_t estB1 = (uint32_t)est  * 2u;      /* A 3 次谐波三-bin 贡献 ≈ 2×峰值(Hann) */
+                uint32_t estB3 = (uint32_t)est9 * 2u;      /* A 9 次谐波三-bin 贡献 */
+                uint32_t p1   = band3(mag, k1);
+                uint32_t p3   = band3(mag, k3);
+                p1 = (p1 > estB1) ? (p1 - estB1) : 0u;     /* 去污后的 B 基波三-bin 能量 */
+                p3 = (p3 > estB3) ? (p3 - estB3) : 0u;     /* 去污后的 B 三次谐波三-bin 能量 */
+                if (p3 == 0u) { res->sig[1].wave = H_WAVE_SINE; }
+                else { res->sig[1].wave = (p1 > p3 * SIGCORE_HARM_THRESH)
+                                          ? H_WAVE_SINE : H_WAVE_TRIANGLE; }
+            }
+            /* k3 越界则保留原判(已用 k1, 受污染, 但无更高谐波可依) */
+        }
     }
+}
+
+/* ANA-2: 块归一化移位. 把峰值左移到落入 (0.5,1.0] 满量程, 不溢出 q15. */
+int32_t SigCore_normShift(uint32_t maxabs)
+{
+    int32_t sh = 0;
+    if (maxabs == 0u) { return 0; }
+    while ((sh < 15) && (((uint32_t)maxabs << (uint32_t)(sh + 1)) <= 32767u)) {
+        sh++;
+    }
+    return sh;
 }

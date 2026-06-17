@@ -17,4 +17,8 @@
 
 void SigCore_analyze(const uint16_t *mag, uint16_t nhalf, uint32_t fs_hz, h_result_t *res);
 
+/* ANA-2 块归一化: 给定加窗后时域峰值绝对值, 返回应左移的位数, 使峰值落入
+ * (0.5, 1.0] 满量程区间(不溢出 q15), 拉高 FFT 谱线 SNR. maxabs=0 返回 0. 纯函数, 可单测. */
+int32_t SigCore_normShift(uint32_t maxabs);
+
 #endif /* SIG_ANALYSIS_CORE_H */

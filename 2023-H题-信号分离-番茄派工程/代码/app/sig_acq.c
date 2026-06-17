@@ -95,6 +95,16 @@ uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
     uint16_t words = (uint16_t)(n >> 1);
 
     s_dma_done = 0U;
+
+    /* ACQ-4: 冲掉上一轮残留, 保证本块从干净状态满 N 样本启动 ——
+     * 否则 repeat 模式下两次 capture 之间累积/未搬完的陈旧样本会拼到新块开头,
+     * 污染 1024 点 FFT 的相位估计. 顺序: 停转换 -> toggle FIFO 清空 -> 清 DMA_DONE 标志. */
+    DL_ADC12_stopConversion(H_ADC_INST);
+    DL_ADC12_disableConversions(H_ADC_INST);
+    DL_ADC12_disableFIFO(H_ADC_INST);
+    DL_ADC12_enableFIFO(H_ADC_INST);
+    DL_ADC12_clearInterruptStatus(H_ADC_INST, DL_ADC12_INTERRUPT_DMA_DONE);
+
     DL_DMA_setSrcAddr(DMA, H_DMA_CHAN, DL_ADC12_getFIFOAddress(H_ADC_INST));
     DL_DMA_setDestAddr(DMA, H_DMA_CHAN, (uint32_t)buf);
     DL_DMA_setTransferSize(DMA, H_DMA_CHAN, words);
