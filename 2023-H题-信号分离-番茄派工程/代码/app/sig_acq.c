@@ -24,7 +24,19 @@
 #define H_DMA_CHAN          0U                /* DMA 通道 0 */
 #define H_ADC_SAMPLE_TIME   17U               /* 采样窗周期数(标定 fs 用) */
 
-static volatile uint8_t s_dma_done = 0U;
+/* ---- 第2路反馈 ADC (ADC1): 采 重建信号 A'+B' 供 PLL 鉴相 ----
+ * ★引脚/通道按番茄派反馈接线确认(占位 TODO); G3507 ADC0/ADC1 双实例支持同时采.
+ * ★同步: SigAcq_captureDual 用"两路软件启动相隔数条指令"近似同步(残留小且基本恒定,
+ *   可上板标定补偿); 若需零时间差, 改用同一 TIMG 周期事件经事件总线同时触发(见 captureDual 注释). */
+#define H_FB_INST           ADC1
+#define H_FB_INT_IRQN       ADC1_INT_IRQn
+#define H_FB_CHAN           DL_ADC12_INPUT_CHAN_0   /* TODO: 确认 ADC1 通道 */
+#define H_FB_MEM            DL_ADC12_MEM_IDX_0
+#define H_FB_PIN_IOMUX      IOMUX_PINCM1            /* TODO: 确认 ADC1 反馈引脚 */
+#define H_FB_DMA_CHAN       1U                      /* DMA 通道 1 */
+
+static volatile uint8_t s_dma_done    = 0U;
+static volatile uint8_t s_fb_dma_done = 0U;
 
 static const DL_ADC12_ClockConfig kAdcClk = {
     .clockSel    = DL_ADC12_CLOCK_SYSOSC,
@@ -44,66 +56,79 @@ static const DL_DMA_Config kDmaCfg = {
     .triggerType   = DL_DMA_TRIGGER_TYPE_EXTERNAL,
 };
 
-void SigAcq_init(void)
+/* 反馈路 DMA: 与上同, 触发源换成 ADC1 的 FIFO 事件 */
+static const DL_DMA_Config kDmaCfgFb = {
+    .transferMode  = DL_DMA_SINGLE_TRANSFER_MODE,
+    .extendedMode  = DL_DMA_NORMAL_MODE,
+    .destIncrement = DL_DMA_ADDR_INCREMENT,
+    .srcIncrement  = DL_DMA_ADDR_UNCHANGED,
+    .destWidth     = DL_DMA_WIDTH_WORD,
+    .srcWidth      = DL_DMA_WIDTH_WORD,
+    .trigger       = DMA_ADC1_EVT_GEN_BD_TRIG,
+    .triggerType   = DL_DMA_TRIGGER_TYPE_EXTERNAL,
+};
+
+/* 一路 ADC 的"采前冲洗": 停转换 + toggle FIFO 清残留 + 清 DMA_DONE 标志 (ACQ-4) */
+static void adc_flush(ADC12_Regs *inst)
 {
-    /* ADC 上电(不走 SysConfig, 手动 reset+enablePower) */
-    DL_ADC12_reset(H_ADC_INST);
-    DL_ADC12_enablePower(H_ADC_INST);
+    DL_ADC12_stopConversion(inst);
+    DL_ADC12_disableConversions(inst);
+    DL_ADC12_disableFIFO(inst);
+    DL_ADC12_enableFIFO(inst);
+    DL_ADC12_clearInterruptStatus(inst, DL_ADC12_INTERRUPT_DMA_DONE);
+}
+
+/* 配置一路 ADC(实例/通道/引脚/DMA通道)为 单通道+repeat+软件触发+FIFO+DMA */
+static void adc_setup(ADC12_Regs *inst, uint32_t chan, uint32_t mem,
+                      uint32_t pin_iomux, uint8_t dma_chan,
+                      const DL_DMA_Config *dma_cfg, IRQn_Type irqn)
+{
+    DL_ADC12_reset(inst);
+    DL_ADC12_enablePower(inst);
     delay_cycles(16);
-
-    /* ADC 输入引脚设为模拟功能 */
-    DL_GPIO_initPeripheralAnalogFunction(H_ADC_PIN_IOMUX);
-
-    DL_ADC12_setClockConfig(H_ADC_INST, (DL_ADC12_ClockConfig *)&kAdcClk);
-
-    /* 单通道 + repeat + 软件触发 */
-    DL_ADC12_initSingleSample(H_ADC_INST,
-        DL_ADC12_REPEAT_MODE_ENABLED,
-        DL_ADC12_SAMPLING_SOURCE_AUTO,
-        DL_ADC12_TRIG_SRC_SOFTWARE,
-        DL_ADC12_SAMP_CONV_RES_12_BIT,
+    DL_GPIO_initPeripheralAnalogFunction(pin_iomux);
+    DL_ADC12_setClockConfig(inst, (DL_ADC12_ClockConfig *)&kAdcClk);
+    DL_ADC12_initSingleSample(inst,
+        DL_ADC12_REPEAT_MODE_ENABLED, DL_ADC12_SAMPLING_SOURCE_AUTO,
+        DL_ADC12_TRIG_SRC_SOFTWARE, DL_ADC12_SAMP_CONV_RES_12_BIT,
         DL_ADC12_SAMP_CONV_DATA_FORMAT_UNSIGNED);
-
-    DL_ADC12_configConversionMem(H_ADC_INST, H_ADC_MEM,
-        H_ADC_CHAN, DL_ADC12_REFERENCE_VOLTAGE_VDDA,
+    DL_ADC12_configConversionMem(inst, mem, chan, DL_ADC12_REFERENCE_VOLTAGE_VDDA,
         DL_ADC12_SAMPLE_TIMER_SOURCE_SCOMP0, DL_ADC12_AVERAGING_MODE_DISABLED,
         DL_ADC12_BURN_OUT_SOURCE_DISABLED, DL_ADC12_TRIGGER_MODE_AUTO_NEXT,
         DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
+    DL_ADC12_enableFIFO(inst);
+    DL_ADC12_setPowerDownMode(inst, DL_ADC12_POWER_DOWN_MODE_MANUAL);
+    DL_ADC12_setSampleTime0(inst, H_ADC_SAMPLE_TIME);
+    DL_ADC12_enableDMA(inst);
+    DL_ADC12_setDMASamplesCnt(inst, 6);
+    DL_ADC12_enableDMATrigger(inst, DL_ADC12_DMA_MEM10_RESULT_LOADED);
+    DL_ADC12_clearInterruptStatus(inst, DL_ADC12_INTERRUPT_DMA_DONE);
+    DL_ADC12_enableInterrupt(inst, DL_ADC12_INTERRUPT_DMA_DONE);
+    DL_DMA_initChannel(DMA, dma_chan, (DL_DMA_Config *)dma_cfg);
+    DL_ADC12_enableConversions(inst);
+    NVIC_EnableIRQ(irqn);
+}
 
-    DL_ADC12_enableFIFO(H_ADC_INST);
-    DL_ADC12_setPowerDownMode(H_ADC_INST, DL_ADC12_POWER_DOWN_MODE_MANUAL);
-    DL_ADC12_setSampleTime0(H_ADC_INST, H_ADC_SAMPLE_TIME);
+void SigAcq_init(void)
+{
+    /* 第1路: 采混合信号 C (ADC0 / 通道2 / PA25) */
+    adc_setup(H_ADC_INST, H_ADC_CHAN, H_ADC_MEM, H_ADC_PIN_IOMUX,
+              H_DMA_CHAN, &kDmaCfg, H_ADC_INT_IRQN);
+}
 
-    /* DMA: ADC FIFO 阈值触发 */
-    DL_ADC12_enableDMA(H_ADC_INST);
-    DL_ADC12_setDMASamplesCnt(H_ADC_INST, 6);
-    DL_ADC12_enableDMATrigger(H_ADC_INST, DL_ADC12_DMA_MEM10_RESULT_LOADED);
-
-    DL_ADC12_clearInterruptStatus(H_ADC_INST, DL_ADC12_INTERRUPT_DMA_DONE);
-    DL_ADC12_enableInterrupt(H_ADC_INST, DL_ADC12_INTERRUPT_DMA_DONE);
-
-    /* DMA 通道配置 */
-    DL_DMA_initChannel(DMA, H_DMA_CHAN, (DL_DMA_Config *)&kDmaCfg);
-
-    DL_ADC12_enableConversions(H_ADC_INST);
-    NVIC_EnableIRQ(H_ADC_INT_IRQN);
+void SigAcq_initFeedback(void)
+{
+    /* 第2路: 采重建信号 A'+B' 作 PLL 反馈 (ADC1) */
+    adc_setup(H_FB_INST, H_FB_CHAN, H_FB_MEM, H_FB_PIN_IOMUX,
+              H_FB_DMA_CHAN, &kDmaCfgFb, H_FB_INT_IRQN);
 }
 
 uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
 {
-    /* FIFO 每字含 2 样本 => DMA 搬 n/2 个字 */
-    uint16_t words = (uint16_t)(n >> 1);
+    uint16_t words = (uint16_t)(n >> 1);   /* FIFO 每字含 2 样本 */
 
     s_dma_done = 0U;
-
-    /* ACQ-4: 冲掉上一轮残留, 保证本块从干净状态满 N 样本启动 ——
-     * 否则 repeat 模式下两次 capture 之间累积/未搬完的陈旧样本会拼到新块开头,
-     * 污染 1024 点 FFT 的相位估计. 顺序: 停转换 -> toggle FIFO 清空 -> 清 DMA_DONE 标志. */
-    DL_ADC12_stopConversion(H_ADC_INST);
-    DL_ADC12_disableConversions(H_ADC_INST);
-    DL_ADC12_disableFIFO(H_ADC_INST);
-    DL_ADC12_enableFIFO(H_ADC_INST);
-    DL_ADC12_clearInterruptStatus(H_ADC_INST, DL_ADC12_INTERRUPT_DMA_DONE);
+    adc_flush(H_ADC_INST);                 /* ACQ-4: 冲掉上一轮残留再启动 */
 
     DL_DMA_setSrcAddr(DMA, H_DMA_CHAN, DL_ADC12_getFIFOAddress(H_ADC_INST));
     DL_DMA_setDestAddr(DMA, H_DMA_CHAN, (uint32_t)buf);
@@ -113,23 +138,63 @@ uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
     DL_ADC12_enableConversions(H_ADC_INST);
     DL_ADC12_startConversion(H_ADC_INST);
 
-    /* 等 DMA 搬完一块 (DMA_DONE 中断置标志) */
-    while (s_dma_done == 0U) {
-        __WFE();
-    }
+    while (s_dma_done == 0U) { __WFE(); }
 
     DL_ADC12_stopConversion(H_ADC_INST);
     return n;
 }
 
-/* ADC0 中断: DMA 搬完整块 -> 置完成标志 */
+/* 双路近同步采集: C -> c_buf (ADC0), 反馈 A'+B' -> fb_buf (ADC1).
+ * 两路同窗口采样, 使 (C相位 − 反馈相位) 差分干净, 供 PLL 鉴相. */
+uint16_t SigAcq_captureDual(uint16_t *c_buf, uint16_t *fb_buf, uint16_t n)
+{
+    uint16_t words = (uint16_t)(n >> 1);
+
+    s_dma_done = 0U;
+    s_fb_dma_done = 0U;
+    adc_flush(H_ADC_INST);
+    adc_flush(H_FB_INST);
+
+    DL_DMA_setSrcAddr(DMA, H_DMA_CHAN, DL_ADC12_getFIFOAddress(H_ADC_INST));
+    DL_DMA_setDestAddr(DMA, H_DMA_CHAN, (uint32_t)c_buf);
+    DL_DMA_setTransferSize(DMA, H_DMA_CHAN, words);
+    DL_DMA_enableChannel(DMA, H_DMA_CHAN);
+
+    DL_DMA_setSrcAddr(DMA, H_FB_DMA_CHAN, DL_ADC12_getFIFOAddress(H_FB_INST));
+    DL_DMA_setDestAddr(DMA, H_FB_DMA_CHAN, (uint32_t)fb_buf);
+    DL_DMA_setTransferSize(DMA, H_FB_DMA_CHAN, words);
+    DL_DMA_enableChannel(DMA, H_FB_DMA_CHAN);
+
+    DL_ADC12_enableConversions(H_ADC_INST);
+    DL_ADC12_enableConversions(H_FB_INST);
+    /* ★同步: 两路软件启动仅相隔数条指令(~百ns), 残留时间差小且基本恒定, 可上板标定补偿.
+     * 若要零时间差(更优): 用同一 TIMG 周期事件经事件总线同时触发 ADC0+ADC1(pub/sub 同通道号),
+     * 把上面两路的 TRIG_SRC 改成 EVENT —— 参考 MSPM0例程-双ADC同步采样与FFT/15_adc_dma_time_trigger,
+     * 顺带把 ACQ-7 的精确采样率也一并解决. */
+    DL_ADC12_startConversion(H_ADC_INST);
+    DL_ADC12_startConversion(H_FB_INST);
+
+    while ((s_dma_done == 0U) || (s_fb_dma_done == 0U)) { __WFE(); }
+
+    DL_ADC12_stopConversion(H_ADC_INST);
+    DL_ADC12_stopConversion(H_FB_INST);
+    return n;
+}
+
+/* ADC0 中断: C 路 DMA 搬完整块 -> 置标志 */
 void ADC0_IRQHandler(void)
 {
     switch (DL_ADC12_getPendingInterrupt(H_ADC_INST)) {
-        case DL_ADC12_IIDX_DMA_DONE:
-            s_dma_done = 1U;
-            break;
-        default:
-            break;
+        case DL_ADC12_IIDX_DMA_DONE: s_dma_done = 1U; break;
+        default: break;
+    }
+}
+
+/* ADC1 中断: 反馈路 DMA 搬完整块 -> 置标志 */
+void ADC1_IRQHandler(void)
+{
+    switch (DL_ADC12_getPendingInterrupt(H_FB_INST)) {
+        case DL_ADC12_IIDX_DMA_DONE: s_fb_dma_done = 1U; break;
+        default: break;
     }
 }

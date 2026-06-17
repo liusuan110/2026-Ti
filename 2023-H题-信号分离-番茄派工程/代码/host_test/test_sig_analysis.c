@@ -121,6 +121,49 @@ static int test_normshift(void)
     return ok;
 }
 
+/* 合成 A+B, 去直流+汉宁窗+FFT, 返回 bin k 处的相位(弧度, atan2(im,re)) —— 模拟目标端
+ * "在已知 bin 处取复数算相位"的过程(目标端用 MATHACL, 这里用 libm 验证概念与约定一致)。*/
+static double phase_at_bin(double fA, int tA, double aA, double pA,
+                           double fB, int tB, double aB, double pB, int k)
+{
+    static float re[NFFT], im[NFFT];
+    int i; double mean = 0.0;
+    for (i = 0; i < NFFT; i++) {
+        double t = (double)i / FS;
+        re[i] = (float)(2048.0 + aA * wave(tA, fA, t, pA) + aB * wave(tB, fB, t, pB));
+        im[i] = 0.0f;
+    }
+    for (i = 0; i < NFFT; i++) mean += re[i];
+    mean /= NFFT;
+    for (i = 0; i < NFFT; i++) re[i] = (float)((re[i] - mean) * (hann1024[i] / 32767.0));
+    fft(re, im, NFFT);
+    return atan2((double)im[k], (double)re[k]);
+}
+
+static double wrap_pi(double a) { while (a > M_PI) a -= 2*M_PI; while (a <= -M_PI) a += 2*M_PI; return a; }
+
+/* PLL 反馈相位提取验证: C=A+B 与 反馈=A'+B'(各路相位偏 Δ), 在已知 bin 处分别测相位,
+ * 作差应复原 −Δ。证明"两次同样测相位再差分"能干净恢复相位差(窗/bin 公共项抵消)。*/
+static int test_feedback_phase(void)
+{
+    double D1 = 0.5, D2 = -0.8;          /* A'、B' 相对原信号的相位偏移(弧度) */
+    int k1 = 50, k2 = 100;               /* fs=1.024M,N=1024 -> 50k@bin50, 100k@bin100 */
+    double dc1, dc2, df1, df2, e1, e2;
+    int ok;
+    dc1 = phase_at_bin(50000,0,600,0.3, 100000,0,600,1.1, k1);
+    df1 = phase_at_bin(50000,0,600,0.3+D1, 100000,0,600,1.1+D2, k1);
+    dc2 = phase_at_bin(50000,0,600,0.3, 100000,0,600,1.1, k2);
+    df2 = phase_at_bin(50000,0,600,0.3+D1, 100000,0,600,1.1+D2, k2);
+    e1 = wrap_pi((dc1 - df1) - (-D1));   /* (ref−fb) 应 ≈ −Δ */
+    e2 = wrap_pi((dc2 - df2) - (-D2));
+    ok = (fabs(e1) < 0.02) && (fabs(e2) < 0.02);   /* <0.02rad ≈ 1.1° */
+    printf("--- 反馈相位提取(PLL鉴相) ---\n");
+    printf("  A@50k 复原相位差 %+.3f(期望%+.3f) 误差%.4f rad\n", wrap_pi(dc1-df1), -D1, e1);
+    printf("  B@100k 复原相位差 %+.3f(期望%+.3f) 误差%.4f rad\n", wrap_pi(dc2-df2), -D2, e2);
+    printf("  -> %s\n", ok ? "PASS" : "FAIL");
+    return ok;
+}
+
 int main(void)
 {
     h_result_t r; int pass = 0, total = 0;
@@ -138,7 +181,8 @@ int main(void)
     /* A三角 + B三角(轻度差异), 去污不应破坏三角判定 + 标 overlap */
     run_case(20000, 1, 800, 0.0, 60000, 1, 600, 0.4, &r);  total++; pass += check_overlap("20k tri+60k tri(3x)", H_WAVE_TRIANGLE, &r);
 
-    total++; pass += test_normshift();   /* ANA-2 */
+    total++; pass += test_normshift();        /* ANA-2 */
+    total++; pass += test_feedback_phase();   /* 第2路ADC反馈相位提取 */
 
     printf("\n==== %d/%d PASS ====\n", pass, total);
     return (pass == total) ? 0 : 1;

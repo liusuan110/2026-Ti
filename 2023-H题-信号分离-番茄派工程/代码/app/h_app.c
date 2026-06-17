@@ -16,7 +16,8 @@
 #define H_LOOP_PERIOD_MS   5u
 
 /* 大缓冲全局, 不放栈; 4 字节对齐(ADC DMA 按 32 位字写入) */
-static uint16_t   s_buf[H_CAP_N] __attribute__((aligned(4)));
+static uint16_t   s_buf[H_CAP_N]    __attribute__((aligned(4)));  /* 混合信号 C */
+static uint16_t   s_fb_buf[H_CAP_N] __attribute__((aligned(4)));  /* 反馈 A'+B' (第2路ADC) */
 static uint32_t   s_next_tick = 0u;               /* 下一控制周期边界(SysTick ms) */
 static h_result_t s_res;                          /* 对 C 的分析结果 */
 static int32_t    s_fb_phase[H_NUM_SIGNALS];      /* 重建信号 A'/B' 的实测相位(反馈) */
@@ -33,20 +34,20 @@ static uint8_t result_ok(const h_sig_t *s)
 }
 
 /* ----------------------------------------------------------------------------
- *  ★上板硬件项: 测量重建信号 A'/B' 的相位作为锁相反馈量.
- *  正确做法(见 上板联调清单.md): 把 A'+B' 经运放引回【ADC 第 2 路通道】,
- *  对其采集一块 -> FFT -> 在两路已知 bin 处 atan2, 得 s_fb_phase[0/1].
- *  G3507 双 12 位 ADC 正为此用.
- *
- *  当前为占位实现: 反馈相位 = 原信号相位(等价于"已完美锁定"), 使闭环成为空操作,
- *  直到第 2 路 ADC 接好. 锁相算法本身已由 host_test/test_pll.c 离板仿真验证.
+ *  测量重建信号 A'/B' 的相位作为锁相反馈量.
+ *  A'+B' 由第 2 路 ADC(ADC1)与 C 近同步采到 s_fb_buf(SigAcq_captureDual),
+ *  这里对其做 窗+FFT, 在两路已知 bin(取自对 C 的分析 s_res.sig[i].bin)处 atan2.
+ *  ★上板项(见 上板联调清单 🔴-1):反馈通道接线 + ADC1 引脚确认 + 两路采样同步标定.
  * -------------------------------------------------------------------------- */
 static void H_App_measureFeedback(void)
 {
-    uint8_t i;
+    uint16_t bins[H_NUM_SIGNALS];
+    uint8_t  i;
     for (i = 0u; i < (uint8_t)H_NUM_SIGNALS; i++) {
-        s_fb_phase[i] = s_res.sig[i].phase_q31;   /* TODO: 替换为第2路ADC实测 */
+        bins[i] = (uint16_t)s_res.sig[i].bin;
     }
+    SigAnalysis_phasesAtBins(s_fb_buf, H_CAP_N, bins,
+                             (uint8_t)H_NUM_SIGNALS, s_fb_phase);
 }
 
 void H_App_init(void)
@@ -54,7 +55,8 @@ void H_App_init(void)
     uint8_t i;
 
     MathUtil_init();        /* MATHACL 上电(.syscfg 未配, 手动) */
-    SigAcq_init();          /* ADC0 + FIFO + DMA */
+    SigAcq_init();          /* ADC0 + FIFO + DMA (采 C) */
+    SigAcq_initFeedback();  /* ADC1 (采反馈 A'+B'); 反馈通道接线为上板项 */
     SigAnalysis_init();
     Reconstruct_init();     /* AD9959 (DDS_init) */
     Pll_init();             /* 两路锁相环核心 */
@@ -71,10 +73,10 @@ void H_App_loop(void)
 {
     uint8_t i;
 
-    /* 1) 采集混合信号 C */
-    (void)SigAcq_capture(s_buf, H_CAP_N);
+    /* 1) 近同步采集: C -> s_buf(ADC0), 反馈 A'+B' -> s_fb_buf(ADC1) */
+    (void)SigAcq_captureDual(s_buf, s_fb_buf, H_CAP_N);
 
-    /* 2) 分析: 两路 频率/幅度/相位/波形 */
+    /* 2) 分析 C: 两路 频率/幅度/相位/波形/峰值bin */
     (void)SigAnalysis_run(s_buf, H_CAP_N, &s_res);
 
     if (s_built == 0U) {
