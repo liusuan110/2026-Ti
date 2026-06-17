@@ -39,6 +39,25 @@ void Reconstruct_setFreqHz(uint8_t idx, float freq_hz)
     AD9959_IOUpdate();
 }
 
+/* PLL 锁相: 直写 32 位 FTW. 复刻 AD9959_setFreq 的"先选通道(CSR)再写CFTW0"序列,
+ * 但用整数频率字, 避免 float 路径在亚-Hz 修正上的精度损失. CFTW0 为大端 4 字节. */
+void Reconstruct_setFtw(uint8_t idx, uint32_t ftw)
+{
+    uint8_t ch[1];
+    uint8_t d[4];
+
+    ch[0] = ch_of(idx);
+    AD9959_writeData(CSR_ADD, 1, ch);          /* 选通道 CHn */
+
+    d[0] = (uint8_t)(ftw >> 24);               /* CFTW0 大端: MSB 先 */
+    d[1] = (uint8_t)(ftw >> 16);
+    d[2] = (uint8_t)(ftw >> 8);
+    d[3] = (uint8_t)(ftw);
+    AD9959_writeData(CFTW0_ADD, 4, d);
+
+    AD9959_IOUpdate();
+}
+
 void Reconstruct_setPhaseDiffDeg(uint8_t idx, uint16_t ref_cpow, int32_t deg)
 {
     uint16_t p = (uint16_t)(((uint32_t)ref_cpow + Recon_degToCpow(deg)) & 0x3FFFu);

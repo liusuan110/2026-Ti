@@ -73,6 +73,8 @@
         <file path="app/reconstruct.c"   openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/reconstruct_core.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/reconstruct_core.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pll_core.h"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pll_core.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.h"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.c"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/h_app.h"         openOnCreation="false" excludeFromBuild="false" action="copy"> </file>

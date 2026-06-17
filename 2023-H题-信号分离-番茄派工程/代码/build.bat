@@ -17,7 +17,7 @@ set CLANG="%CGT%\bin\tiarmclang.exe"
 set FLAGS=-march=thumbv6m -mcpu=cortex-m0plus -mfloat-abi=soft -mlittle-endian -mthumb -O2 -gdwarf-3 -D__MSPM0G3507__ -DARM_MATH_CM0
 
 if not exist "%OUT%\syscfg" mkdir "%OUT%\syscfg"
-set INCS=-I"%PROJ%" -I"%PROJ%app" -I"%PROJ%User" -I"%OUT%\syscfg" -I"%CMSIS%\Core\Include" -I"%CMSIS%\DSP\Include" -I"%SDK%\source"
+set INCS=-I"%PROJ%." -I"%PROJ%app" -I"%PROJ%User" -I"%OUT%\syscfg" -I"%CMSIS%\Core\Include" -I"%CMSIS%\DSP\Include" -I"%SDK%\source"
 
 echo ===== SYSCONFIG (2.10) ===== > "%LOG%"
 call "%SYSCFG%" --compiler ticlang --product "%SDK%\.metadata\product.json" --output "%OUT%\syscfg" "%PROJ%H_SignalSep.syscfg" >> "%LOG%" 2>&1
@@ -36,13 +36,14 @@ echo ===== COMPILE ===== >> "%LOG%"
 %CLANG% -c %FLAGS% %INCS% -o sig_analysis_core.o "%PROJ%app\sig_analysis_core.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o reconstruct.o  "%PROJ%app\reconstruct.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o reconstruct_core.o "%PROJ%app\reconstruct_core.c" >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o pll_core.o     "%PROJ%app\pll_core.c"  >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o pll.o          "%PROJ%app\pll.c"         >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o h_app.o        "%PROJ%app\h_app.c"       >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o syscfg_config.o "%OUT%\syscfg\ti_msp_dl_config.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o startup.o "%SDK%\source\ti\devices\msp\m0p\startup_system_files\ticlang\startup_mspm0g350x_ticlang.c" >> "%LOG%" 2>&1
 
 echo ===== LINK ===== >> "%LOG%"
-%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o UserTask.o mathacl_util.o sig_acq.o sig_analysis.o sig_analysis_core.o reconstruct.o reconstruct_core.o pll.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
+%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o UserTask.o mathacl_util.o sig_acq.o sig_analysis.o sig_analysis_core.o reconstruct.o reconstruct_core.o pll_core.o pll.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
 echo ===== RESULT ===== >> "%LOG%"
 dir h.out >> "%LOG%" 2>&1
 echo BAT_DONE
