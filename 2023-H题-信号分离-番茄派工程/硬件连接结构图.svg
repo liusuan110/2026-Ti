@@ -1,6 +1,6 @@
 <svg viewBox="0 0 1200 660" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" role="img">
   <title>2023 H题 信号分离 — 硬件连接结构图(番茄派 MSPM0G3507 + AD9959)</title>
-  <desc>信号源A/B经NE5532加法器得C,进ADC0通道2(PA25),MSPM0经软件SPI驱动AD9959出A'/B',经重构滤波运放到示波器;A'+B'反馈引回ADC第2路供PLL锁相(待接)。</desc>
+  <desc>信号源A/B经NE5532加法器得C,进ADC0通道2(PA25),MSPM0经软件SPI驱动AD9959出A'/B',经重构滤波运放到示波器;A'+B'反馈引回ADC1供PLL锁相(代码已就绪,硬件待接)。</desc>
   <defs>
     <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker>
     <marker id="afb" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c2410c"/></marker>
@@ -14,7 +14,7 @@
   <text x="40" y="86" font-size="11.5" fill="#334155">· ADC 输入 C:PA25(ADC0 通道2)</text>
   <text x="40" y="105" font-size="11.5" fill="#334155">· AD9959 软件SPI:SCLK=PA7 · SDIO0=PB2 · CS=PB3</text>
   <text x="52" y="122" font-size="11.5" fill="#334155">UPDATE=PA8 · RST=PA9</text>
-  <text x="40" y="141" font-size="11.5" fill="#c2410c">· ★PLL 反馈:A'+B' → ADC 第2路(硬件待接+代码待加)</text>
+  <text x="40" y="141" font-size="11.5" fill="#c2410c">· PLL 反馈:A'+B' → ADC1(代码已就绪,硬件待接)</text>
   <text x="40" y="159" font-size="11.5" fill="#334155">· 三角波(发挥①)由模拟硬件链生成,固件只出正弦</text>
 
   <!-- 信号源 group -->
@@ -47,8 +47,8 @@
   <text x="619" y="346" font-size="12.5" fill="#1e293b" text-anchor="middle">FFT 分析</text>
   <text x="619" y="364" font-size="11" fill="#475569" text-anchor="middle">+ 软件 PLL</text>
   <rect x="539" y="430" width="160" height="68" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-dasharray="5 3"/>
-  <text x="619" y="456" font-size="12.5" fill="#9a3412" text-anchor="middle">ADC0 第2路</text>
-  <text x="619" y="474" font-size="11" fill="#c2410c" text-anchor="middle">★反馈采集(待新增)</text>
+  <text x="619" y="456" font-size="12.5" fill="#9a3412" text-anchor="middle">ADC1 反馈通道</text>
+  <text x="619" y="474" font-size="11" fill="#c2410c" text-anchor="middle">反馈采集(代码就绪,待接)</text>
 
   <!-- AD9959 group -->
   <rect x="744" y="252" width="160" height="200" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
@@ -89,5 +89,5 @@
 
   <!-- feedback dashed -->
   <path d="M1014,348 L1014,620 L619,620 L619,498" fill="none" stroke="#c2410c" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#afb)"/>
-  <text x="816" y="613" font-size="11.5" font-weight="bold" fill="#c2410c" text-anchor="middle">★ 反馈:A'+B' 经运放引回(硬件待接)</text>
+  <text x="816" y="613" font-size="11.5" font-weight="bold" fill="#c2410c" text-anchor="middle">反馈:A'+B' 经运放引回 ADC1(硬件待接)</text>
 </svg>
