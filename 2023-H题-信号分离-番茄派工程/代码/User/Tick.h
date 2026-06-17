@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "ti_msp_dl_config.h"
-#include "UserTask.h"
 
 extern volatile uint32_t Tick;
 

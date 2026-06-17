@@ -59,6 +59,10 @@
         <file path="main.c"             openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="H_SignalSep.syscfg" openOnCreation="true"  excludeFromBuild="false" action="copy"> </file>
 
+        <!-- BUILD-1: 显式纳入 SDK 启动文件(复位向量/_c_int00/各 IRQ 弱别名),
+             不依赖 CCS 自动添加, 否则 GUI 构建可能链接缺 _c_int00 或中断向量为空表. -->
+        <file path="${COM_TI_MSPM0_SDK_INSTALL_DIR}/source/ti/devices/msp/m0p/startup_system_files/ticlang/startup_mspm0g350x_ticlang.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+
         <file path="app/h_config.h"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/mathacl_util.h"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/mathacl_util.c"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
@@ -86,7 +90,5 @@
         <file path="User/DDS.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="User/Tick.h"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="User/Tick.c"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
-        <file path="User/UserTask.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
-        <file path="User/UserTask.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
     </project>
 </projectSpec>

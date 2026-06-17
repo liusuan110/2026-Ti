@@ -21,7 +21,7 @@ const divider9       = system.clockTree["UDIV"];
 divider9.divideValue = 2;
 
 const multiplier2         = system.clockTree["PLL_QDIV"];
-multiplier2.multiplyValue = 4;
+multiplier2.multiplyValue = 5;   /* BUILD-3: 片内 SYSOSC 32MHz ×5 = 160MHz VCO, 输出 /2 = 80MHz (原 HFCLK 40×4) */
 
 const mux2       = system.clockTree["CANCLKMUX"];
 mux2.inputSelect = "CANCLKMUX_PLLCLK1_OUT";
@@ -29,14 +29,10 @@ mux2.inputSelect = "CANCLKMUX_PLLCLK1_OUT";
 const mux8       = system.clockTree["HSCLKMUX"];
 mux8.inputSelect = "HSCLKMUX_SYSPLL0";
 
+/* BUILD-3: SYSPLL 改用片内 SYSOSC(32MHz, 任何板子都有), 去除对 PA6 外部 40MHz 时钟的依赖.
+ * 原配置依赖 HFCLKEXT(PA6 灌入 40MHz), 番茄派若无该外部时钟则 SYSCFG_DL_init 卡死在等 PLL 锁定. */
 const mux12       = system.clockTree["SYSPLLMUX"];
-mux12.inputSelect = "zSYSPLLMUX_HFCLK";
-
-const pinFunction3                         = system.clockTree["HFCLKEXT"];
-pinFunction3.enable                        = true;
-pinFunction3.inputFreq                     = 40;
-pinFunction3.peripheral.$assign            = "SYSCTL";
-pinFunction3.peripheral.hfclkInPin.$assign = "PA6";
+mux12.inputSelect = "SYSPLLMUX_SYSOSC";
 
 GPIO1.$name                          = "GPIO_DDS";
 GPIO1.associatedPins.create(5);

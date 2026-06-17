@@ -14,5 +14,4 @@ void Tick_delay(uint32_t t) {
 // SysTick中断(1ms)
 void SysTick_Handler(void) {
     Tick++;
-    SweepTick++;
 }
