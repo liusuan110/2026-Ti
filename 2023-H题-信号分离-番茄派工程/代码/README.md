@@ -15,7 +15,7 @@
 ├── H_SignalSep.syscfg        ← 时钟80MHz + GPIO_DDS + SysTick (SDK 2.10)
 ├── main.c                    ← SYSCFG_DL_init + H_App_init + loop
 ├── app/                      ← H题模块: sig_acq / sig_analysis / mathacl_util / reconstruct / pll / h_app / h_config
-├── User/                     ← AD9959 驱动: AD9959 / DDS / Tick / UserTask
+├── User/                     ← AD9959 驱动: AD9959 / DDS / Tick
 ├── build.bat                 ← 命令行构建(可选,需英文路径)
 └── README.md
 ```
