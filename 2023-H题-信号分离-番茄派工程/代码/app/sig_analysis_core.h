@@ -21,4 +21,11 @@ void SigCore_analyze(const uint16_t *mag, uint16_t nhalf, uint32_t fs_hz, h_resu
  * (0.5, 1.0] 满量程区间(不溢出 q15), 拉高 FFT 谱线 SNR. maxabs=0 返回 0. 纯函数, 可单测. */
 int32_t SigCore_normShift(uint32_t maxabs);
 
+/* 频率吸附: 把测得频率四舍五入到最近 H_FREQ_STEP_HZ 网格, 并夹到 [MIN,MAX].
+ * 依据: 题目所有输入都在 5kHz 整数倍上 -> 吸附中和片内 SYSOSC ±2% 的 fs 绝对误差,
+ *       使 AD9959 输出精确网格频率、PLL 只需拉两晶振 ppm 级差. 纯函数, 可单测.
+ * 注意: 仅在固件层(SigAnalysis_run, 受 H_FREQ_SNAP_GRID 控)调用, 不污染 SigCore_analyze
+ *       的原始插值(离 bin 精度测试仍测原始值). */
+uint32_t SigCore_snapFreq(uint32_t f_hz);
+
 #endif /* SIG_ANALYSIS_CORE_H */

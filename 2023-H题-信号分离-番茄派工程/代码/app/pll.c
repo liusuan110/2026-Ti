@@ -45,3 +45,11 @@ uint8_t Pll_locked(uint8_t idx)
 {
     return (idx < (uint8_t)H_NUM_SIGNALS) ? s_core[idx].locked : 0u;
 }
+
+void Pll_diag(uint8_t idx, int32_t *out_perr_q31, uint32_t *out_ftw, uint8_t *out_locked)
+{
+    if (idx >= (uint8_t)H_NUM_SIGNALS) { return; }
+    if (out_perr_q31 != 0) { *out_perr_q31 = s_core[idx].last_perr; }
+    if (out_ftw      != 0) { *out_ftw      = s_core[idx].ftw_out;   }
+    if (out_locked   != 0) { *out_locked   = s_core[idx].locked;    }
+}

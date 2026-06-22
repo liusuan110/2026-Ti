@@ -121,6 +121,32 @@ static int test_normshift(void)
     return ok;
 }
 
+/* 频率吸附: 验证四舍五入到 5kHz 网格 + 边界夹取 */
+static int test_snapfreq(void)
+{
+    struct { uint32_t in, exp; } c[] = {
+        {50000u, 50000u},   /* 已在网格 */
+        {52247u, 50000u},   /* 离 bin -> 最近 50k */
+        {77753u, 80000u},   /* -> 80k */
+        {52600u, 55000u},   /* >2.5k 偏移 -> 55k */
+        {99100u, 100000u},  /* 近上界 */
+        {10400u, 10000u},   /* 近下界 */
+        {5000u,  10000u},   /* 低于下界 -> 夹到 10k */
+        {120000u,100000u},  /* 高于上界 -> 夹到 100k */
+        {47500u, 50000u},   /* 正好半格(四舍五入向上) */
+    };
+    int i, ok = 1;
+    printf("--- 频率吸附 SigCore_snapFreq ---\n");
+    for (i = 0; i < (int)(sizeof c / sizeof c[0]); i++) {
+        uint32_t got = SigCore_snapFreq(c[i].in);
+        int good = (got == c[i].exp);
+        printf("  %6u -> %6u (期望 %6u) %s\n", c[i].in, got, c[i].exp, good ? "ok" : "BAD");
+        ok = ok && good;
+    }
+    printf("  -> %s\n", ok ? "PASS" : "FAIL");
+    return ok;
+}
+
 /* 合成 A+B, 去直流+汉宁窗+FFT, 返回 bin k 处的相位(弧度, atan2(im,re)) —— 模拟目标端
  * "在已知 bin 处取复数算相位"的过程(目标端用 MATHACL, 这里用 libm 验证概念与约定一致)。*/
 static double phase_at_bin(double fA, int tA, double aA, double pA,
@@ -182,6 +208,7 @@ int main(void)
     run_case(20000, 1, 800, 0.0, 60000, 1, 600, 0.4, &r);  total++; pass += check_overlap("20k tri+60k tri(3x)", H_WAVE_TRIANGLE, &r);
 
     total++; pass += test_normshift();        /* ANA-2 */
+    total++; pass += test_snapfreq();          /* 频率吸附到5kHz网格 */
     total++; pass += test_feedback_phase();   /* 第2路ADC反馈相位提取 */
 
     printf("\n==== %d/%d PASS ====\n", pass, total);

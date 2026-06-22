@@ -57,6 +57,14 @@ uint8_t SigAnalysis_run(const uint16_t *buf, uint16_t n, h_result_t *res)
     /* 算法核: 两路 频率/幅度/波形/峰值bin(抛物线插值在汉宁窗下精度更高) */
     SigCore_analyze(s_mag, nhalf, (uint32_t)H_ADC_FS_HZ, res);
 
+#if H_FREQ_SNAP_GRID
+    /* 频率吸附到 5kHz 网格(题目输入均在网格上): 中和 fs ±2% 绝对误差,
+     * 使重建/PLL 用精确网格频率. 峰值 bin 仍为原始值(供上板标定 fs/调试). */
+    for (s = 0u; s < (uint16_t)H_NUM_SIGNALS; s++) {
+        res->sig[s].freq_hz = SigCore_snapFreq(res->sig[s].freq_hz);
+    }
+#endif
+
     /* 相位: 直接用算法核给出的峰值 bin 取复数 atan2 (ANA-1: 不由频率反算) */
     for (s = 0u; s < (uint16_t)H_NUM_SIGNALS; s++) {
         uint16_t kb = res->sig[s].bin;

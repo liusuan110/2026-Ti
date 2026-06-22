@@ -81,6 +81,14 @@
         <file path="app/pll_core.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.h"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.c"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/telemetry_core.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/telemetry_core.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/telemetry.h"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/telemetry.c"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/tjc_hmi_core.h"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/tjc_hmi_core.c"  openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/tjc_hmi.h"       openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/tjc_hmi.c"       openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/h_app.h"         openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/h_app.c"         openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
 

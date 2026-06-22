@@ -40,4 +40,8 @@ uint8_t Pll_track(uint8_t idx, int32_t phi_ref_q31, int32_t phi_fb_q31,
 
 uint8_t Pll_locked(uint8_t idx);
 
+/* 只读诊断(遥测/上板观测用): 取该路最近相位误差(Q31)、当前 FTW、锁定标志.
+ * 任一出参可传 NULL. idx 越界则不写出参. */
+void Pll_diag(uint8_t idx, int32_t *out_perr_q31, uint32_t *out_ftw, uint8_t *out_locked);
+
 #endif /* PLL_H */

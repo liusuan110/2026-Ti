@@ -13,6 +13,12 @@ const GPIO1         = GPIO.addInstance();
 const SYSCTL        = scripting.addModule("/ti/driverlib/SYSCTL");
 const SYSTICK       = scripting.addModule("/ti/driverlib/SYSTICK");
 const ProjectConfig = scripting.addModule("/ti/project_config/ProjectConfig");
+/* P0 遥测 UART + P1 ADC 触发定时器 + 淘晶驰串口屏 UART(见 app/h_config.h 的开关) */
+const UART          = scripting.addModule("/ti/driverlib/UART", {}, false);
+const UART_TEL      = UART.addInstance();
+const UART_TJC      = UART.addInstance();
+const TIMER         = scripting.addModule("/ti/driverlib/TIMER", {}, false);
+const TIMER_ADC     = TIMER.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -56,6 +62,38 @@ GPIO1.associatedPins[4].$name        = "DDS_RST";
 GPIO1.associatedPins[4].assignedPort = "PORTA";
 GPIO1.associatedPins[4].assignedPin  = "9";
 GPIO1.associatedPins[4].pin.$assign  = "PA9";
+
+/* P0 遥测 UART: UART0, TX=PA10 / RX=PA11, 115200 8N1.
+ * 上板把 TX(PA10) 接 USB-TTL 的 RX, 共地; 串口助手即可看每周期诊断行.
+ * ★PA10/PA11 是否引到番茄派排针按丝印确认(与 DDS/ADC/SWD 引脚不冲突). */
+UART_TEL.$name                    = "UART_TEL";
+UART_TEL.targetBaudRate           = 115200;
+UART_TEL.peripheral.$assign       = "UART0";
+UART_TEL.peripheral.txPin.$assign = "PA10";
+UART_TEL.peripheral.rxPin.$assign = "PA11";
+UART_TEL.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric_UART_TX";
+UART_TEL.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric_UART_RX";
+
+/* 淘晶驰串口屏 UART: UART1, 115200 8N1(波形需要; 须与上位机工程波特率一致, 出厂屏默认9600须在工程里改成115200).
+ * MCU 的 TX 接屏的 RXD、MCU 的 RX 接屏的 TXD、5V/GND 共地. 引脚由 SysConfig 自动分配, 见生成宏.
+ * RX 中断: 收触摸键值(0x65)/相位自造帧/当前页(0x66)/addt 握手(0xFE/0xFD), 见 tjc_hmi.c. */
+UART_TJC.$name                    = "UART_TJC";
+UART_TJC.targetBaudRate           = 115200;
+UART_TJC.enabledInterrupts        = ["RX"];
+UART_TJC.peripheral.$assign       = "UART1";
+UART_TJC.txPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric_TJC_TX";
+UART_TJC.rxPinConfig.$name        = "ti_driverlib_gpio_GPIOPinGeneric_TJC_RX";
+
+/* P1 ADC 采样定时器: 周期事件 -> 事件通道1, ADC0/ADC1 在 C 侧订阅同一通道 => 同一时刻触发(零时间差).
+ * 请求周期 977ns, SysConfig 实际取 LOAD=77(@80MHz BUSCLK)=> 78×12.5ns=975ns
+ * => fs = 80MHz/78 = 1025641 Hz ≈ 1.0256 MSa/s(与 h_config.h H_ADC_FS_HZ 一致, 稳定无抖).
+ * ★ event1PublisherChannel 必须等于 sig_acq.c 的 H_ADC_TRIG_EVENT_CHAN. */
+TIMER_ADC.$name                       = "TIMER_ADC";
+TIMER_ADC.timerMode                   = "PERIODIC";
+TIMER_ADC.timerStartTimer             = true;
+TIMER_ADC.timerPeriod                 = "977 ns";
+TIMER_ADC.event1PublisherChannel      = 1;
+TIMER_ADC.event1ControllerInterruptEn = ["ZERO_EVENT"];
 
 const Board                       = scripting.addModule("/ti/driverlib/Board", {}, false);
 Board.peripheral.$assign          = "DEBUGSS";

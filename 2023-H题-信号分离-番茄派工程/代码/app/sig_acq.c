@@ -1,6 +1,11 @@
 #include "sig_acq.h"
 #include "ti_msp_dl_config.h"
 #include <ti/driverlib/driverlib.h>
+#include "Tick.h"   /* 采集超时用 SysTick ms 计数 Tick(建议7 防卡死) */
+
+/* 单块采集硬超时(ms): 正常一块 1024 点 @~1MSa/s ≈ 1ms, 取 50ms 远超之.
+ * 仅用于"DMA_DONE 永不来"时不死等(SysTick 每 1ms 唤醒 __WFE, 故能跳出). */
+#define H_ACQ_TIMEOUT_MS    50u
 
 /* ============================================================================
  *  ADC12 + FIFO + DMA 块采集 (番茄派 MSPM0G3507, ADC0)
@@ -35,8 +40,29 @@
 #define H_FB_PIN_IOMUX      IOMUX_PINCM1            /* TODO: 确认 ADC1 反馈引脚 */
 #define H_FB_DMA_CHAN       1U                      /* DMA 通道 1 */
 
+/* ---- P1: 触发源(由 h_config.h 的 H_ACQ_USE_TIMER_TRIGGER 选择) ----
+ * 定时器模式: ADC 触发源=事件, 每个事件触发下一次转换; ADC0/ADC1 订阅同一事件通道
+ *   => 同一时刻采样(零时间差). 软件模式: 软件启动 + 自动连转(原路径, 作回退). */
+#if H_ACQ_USE_TIMER_TRIGGER
+#define H_ADC_TRIGSRC       DL_ADC12_TRIG_SRC_EVENT
+#define H_ADC_MEMTRIG       DL_ADC12_TRIGGER_MODE_TRIGGER_NEXT
+#define H_ADC_TRIG_EVENT_CHAN  1u   /* ★必须 == syscfg TIMER_ADC.event1PublisherChannel */
+#if (H_ADC_TRIG_EVENT_CHAN != TIMER_ADC_INST_PUB_0_CH)
+#error "H_ADC_TRIG_EVENT_CHAN 与 syscfg TIMER_ADC 发布通道不一致 (改了 syscfg 须同步此值)"
+#endif
+#else
+#define H_ADC_TRIGSRC       DL_ADC12_TRIG_SRC_SOFTWARE
+#define H_ADC_MEMTRIG       DL_ADC12_TRIGGER_MODE_AUTO_NEXT
+#endif
+
 static volatile uint8_t s_dma_done    = 0U;
 static volatile uint8_t s_fb_dma_done = 0U;
+
+#if H_ACQ_USE_TIMER_TRIGGER
+/* 采样定时器启停: 用于"停表->两路都使能->启表", 保证第一个事件同时命中两路(块对齐+零时间差). */
+static inline void acq_timer_stop(void)  { DL_TimerA_stopCounter(TIMER_ADC_INST);  }
+static inline void acq_timer_start(void) { DL_TimerA_startCounter(TIMER_ADC_INST); }
+#endif
 
 static const DL_ADC12_ClockConfig kAdcClk = {
     .clockSel    = DL_ADC12_CLOCK_SYSOSC,
@@ -90,12 +116,16 @@ static void adc_setup(ADC12_Regs *inst, uint32_t chan, uint32_t mem,
     DL_ADC12_setClockConfig(inst, (DL_ADC12_ClockConfig *)&kAdcClk);
     DL_ADC12_initSingleSample(inst,
         DL_ADC12_REPEAT_MODE_ENABLED, DL_ADC12_SAMPLING_SOURCE_AUTO,
-        DL_ADC12_TRIG_SRC_SOFTWARE, DL_ADC12_SAMP_CONV_RES_12_BIT,
+        H_ADC_TRIGSRC, DL_ADC12_SAMP_CONV_RES_12_BIT,
         DL_ADC12_SAMP_CONV_DATA_FORMAT_UNSIGNED);
     DL_ADC12_configConversionMem(inst, mem, chan, DL_ADC12_REFERENCE_VOLTAGE_VDDA,
         DL_ADC12_SAMPLE_TIMER_SOURCE_SCOMP0, DL_ADC12_AVERAGING_MODE_DISABLED,
-        DL_ADC12_BURN_OUT_SOURCE_DISABLED, DL_ADC12_TRIGGER_MODE_AUTO_NEXT,
+        DL_ADC12_BURN_OUT_SOURCE_DISABLED, H_ADC_MEMTRIG,
         DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
+#if H_ACQ_USE_TIMER_TRIGGER
+    /* 订阅采样定时器事件(两路同一通道 => 同一时刻触发) */
+    DL_ADC12_setSubscriberChanID(inst, (uint8_t)H_ADC_TRIG_EVENT_CHAN);
+#endif
     DL_ADC12_enableFIFO(inst);
     DL_ADC12_setPowerDownMode(inst, DL_ADC12_POWER_DOWN_MODE_MANUAL);
     DL_ADC12_setSampleTime0(inst, H_ADC_SAMPLE_TIME);
@@ -126,7 +156,11 @@ void SigAcq_initFeedback(void)
 uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
 {
     uint16_t words = (uint16_t)(n >> 1);   /* FIFO 每字含 2 样本 */
+    uint32_t t0;
 
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_stop();
+#endif
     s_dma_done = 0U;
     adc_flush(H_ADC_INST);                 /* ACQ-4: 冲掉上一轮残留再启动 */
 
@@ -136,20 +170,41 @@ uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
     DL_DMA_enableChannel(DMA, H_DMA_CHAN);
 
     DL_ADC12_enableConversions(H_ADC_INST);
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_start();                     /* 定时器事件驱动转换(不需 startConversion) */
+#else
     DL_ADC12_startConversion(H_ADC_INST);
+#endif
 
-    while (s_dma_done == 0U) { __WFE(); }
+    t0 = Tick;
+    while (s_dma_done == 0U) {
+        __WFE();
+        if ((uint32_t)(Tick - t0) > (uint32_t)H_ACQ_TIMEOUT_MS) { break; }  /* 防卡死 */
+    }
 
     DL_ADC12_stopConversion(H_ADC_INST);
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_stop();
+#endif
     return n;
 }
 
-/* 双路近同步采集: C -> c_buf (ADC0), 反馈 A'+B' -> fb_buf (ADC1).
- * 两路同窗口采样, 使 (C相位 − 反馈相位) 差分干净, 供 PLL 鉴相. */
+/* 双路同步采集: C -> c_buf (ADC0), 反馈 A'+B' -> fb_buf (ADC1).
+ * 两路同窗口采样, 使 (C相位 − 反馈相位) 差分干净, 供 PLL 鉴相.
+ *
+ * 定时器模式(H_ACQ_USE_TIMER_TRIGGER=1, 推荐): "停表 -> flush两路 -> 装填两路DMA ->
+ *   两路都 enableConversions -> 启表". 停表期间使能两路, 杜绝"使能间隙落入一个定时器边沿
+ *   导致两路错开一个采样点(~975ns)"的竞态; 启表后第一个 ZERO 事件【同时】命中 ADC0/ADC1,
+ *   零时间差 + 块对齐. 发挥②相位差≤5° 对此敏感(一个采样点≈在100kHz上35°).
+ * 软件模式(=0, 回退): 两路软件启动相隔数条指令(~百ns), 残差小且基本恒定, 可上板标定补偿. */
 uint16_t SigAcq_captureDual(uint16_t *c_buf, uint16_t *fb_buf, uint16_t n)
 {
     uint16_t words = (uint16_t)(n >> 1);
+    uint32_t t0;
 
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_stop();
+#endif
     s_dma_done = 0U;
     s_fb_dma_done = 0U;
     adc_flush(H_ADC_INST);
@@ -167,17 +222,24 @@ uint16_t SigAcq_captureDual(uint16_t *c_buf, uint16_t *fb_buf, uint16_t n)
 
     DL_ADC12_enableConversions(H_ADC_INST);
     DL_ADC12_enableConversions(H_FB_INST);
-    /* ★同步: 两路软件启动仅相隔数条指令(~百ns), 残留时间差小且基本恒定, 可上板标定补偿.
-     * 若要零时间差(更优): 用同一 TIMG 周期事件经事件总线同时触发 ADC0+ADC1(pub/sub 同通道号),
-     * 把上面两路的 TRIG_SRC 改成 EVENT —— 参考 MSPM0例程-双ADC同步采样与FFT/15_adc_dma_time_trigger,
-     * 顺带把 ACQ-7 的精确采样率也一并解决. */
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_start();   /* 第一个 ZERO 事件同时触发两路 ADC => 零时间差 */
+#else
     DL_ADC12_startConversion(H_ADC_INST);
     DL_ADC12_startConversion(H_FB_INST);
+#endif
 
-    while ((s_dma_done == 0U) || (s_fb_dma_done == 0U)) { __WFE(); }
+    t0 = Tick;
+    while ((s_dma_done == 0U) || (s_fb_dma_done == 0U)) {
+        __WFE();
+        if ((uint32_t)(Tick - t0) > (uint32_t)H_ACQ_TIMEOUT_MS) { break; }  /* 防卡死 */
+    }
 
     DL_ADC12_stopConversion(H_ADC_INST);
     DL_ADC12_stopConversion(H_FB_INST);
+#if H_ACQ_USE_TIMER_TRIGGER
+    acq_timer_stop();
+#endif
     return n;
 }
 

@@ -132,3 +132,18 @@ int32_t SigCore_normShift(uint32_t maxabs)
     }
     return sh;
 }
+
+/* 频率吸附到最近 H_FREQ_STEP_HZ 网格, 夹到 [H_FREQ_MIN_HZ, H_FREQ_MAX_HZ]. */
+uint32_t SigCore_snapFreq(uint32_t f_hz)
+{
+    const uint32_t step = (uint32_t)H_FREQ_STEP_HZ;
+    const uint32_t lo   = (uint32_t)H_FREQ_MIN_HZ;
+    const uint32_t hi   = (uint32_t)H_FREQ_MAX_HZ;
+    uint32_t snapped;
+    if (f_hz <= lo) { return lo; }
+    if (f_hz >= hi) { return hi; }
+    snapped = ((f_hz + step / 2u) / step) * step;   /* 四舍五入到 step 倍数 */
+    if (snapped < lo) { snapped = lo; }
+    if (snapped > hi) { snapped = hi; }
+    return snapped;
+}

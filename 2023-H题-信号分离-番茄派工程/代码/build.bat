@@ -22,6 +22,12 @@ set INCS=-I"%PROJ%." -I"%PROJ%app" -I"%PROJ%User" -I"%OUT%\syscfg" -I"%CMSIS%\Co
 echo ===== SYSCONFIG (2.10) ===== > "%LOG%"
 call "%SYSCFG%" --compiler ticlang --product "%SDK%\.metadata\product.json" --output "%OUT%\syscfg" "%PROJ%H_SignalSep.syscfg" >> "%LOG%" 2>&1
 
+rem === 修正内存图: 裸 SysConfig CLI 把 G350X 家族默认成 G3505(FLASH 32KB/SRAM 16KB),
+rem     而本工程目标 MSPM0G3507 实为 FLASH 128KB(0x20000)/SRAM 32KB(0x8000)。
+rem     CCS 经 projectspec 的 device=MSPM0G3507 已是 128KB; 此处仅为命令行验证对齐真实容量。
+echo ===== FIX MEMORY MAP (G3505 default -> G3507 128K/32K) ===== >> "%LOG%"
+powershell -NoProfile -Command "$f='%OUT%\syscfg\device_linker.cmd'; (Get-Content $f) -replace 'length = 0x00008000','length = 0x00020000' -replace 'length = 0x00004000','length = 0x00008000' | Set-Content $f" >> "%LOG%" 2>&1
+
 cd /d "%OUT%"
 if exist h.out del h.out
 echo ===== COMPILE ===== >> "%LOG%"
@@ -37,12 +43,16 @@ echo ===== COMPILE ===== >> "%LOG%"
 %CLANG% -c %FLAGS% %INCS% -o reconstruct_core.o "%PROJ%app\reconstruct_core.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o pll_core.o     "%PROJ%app\pll_core.c"  >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o pll.o          "%PROJ%app\pll.c"         >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o telemetry_core.o "%PROJ%app\telemetry_core.c" >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o telemetry.o    "%PROJ%app\telemetry.c"   >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o tjc_hmi_core.o "%PROJ%app\tjc_hmi_core.c" >> "%LOG%" 2>&1
+%CLANG% -c %FLAGS% %INCS% -o tjc_hmi.o      "%PROJ%app\tjc_hmi.c"     >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o h_app.o        "%PROJ%app\h_app.c"       >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o syscfg_config.o "%OUT%\syscfg\ti_msp_dl_config.c" >> "%LOG%" 2>&1
 %CLANG% -c %FLAGS% %INCS% -o startup.o "%SDK%\source\ti\devices\msp\m0p\startup_system_files\ticlang\startup_mspm0g350x_ticlang.c" >> "%LOG%" 2>&1
 
 echo ===== LINK ===== >> "%LOG%"
-%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o mathacl_util.o sig_acq.o sig_analysis.o sig_analysis_core.o reconstruct.o reconstruct_core.o pll_core.o pll.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
+%CLANG% %FLAGS% -Wl,-m"h.map" -Wl,-i"%SDK%\source" -Wl,-i"%OUT%\syscfg" -Wl,-i"%CGT%\lib" -Wl,--rom_model -o "h.out" main.o AD9959.o DDS.o Tick.o mathacl_util.o sig_acq.o sig_analysis.o sig_analysis_core.o reconstruct.o reconstruct_core.o pll_core.o pll.o telemetry_core.o telemetry.o tjc_hmi_core.o tjc_hmi.o h_app.o syscfg_config.o startup.o -Wl,-l"syscfg\device_linker.cmd" -Wl,-ldevice.cmd.genlibs "%CMSIS%\DSP\lib\ticlang\m0p\arm_cortexM0l_math.a" -Wl,-llibc.a >> "%LOG%" 2>&1
 echo ===== RESULT ===== >> "%LOG%"
 dir h.out >> "%LOG%" 2>&1
 echo BAT_DONE
