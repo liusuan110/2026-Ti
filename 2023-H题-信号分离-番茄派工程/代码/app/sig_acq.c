@@ -40,6 +40,16 @@
 #define H_FB_PIN_IOMUX      IOMUX_PINCM1            /* TODO: 确认 ADC1 反馈引脚 */
 #define H_FB_DMA_CHAN       1U                      /* DMA 通道 1 */
 
+/* ---- 模拟鉴相模式(H_LOCK_METHOD==H_LOCK_ANALOG_PID): ADC1 改 2 通道单次读鉴相直流电压 ----
+ * 配方照学长生成配置: initSeqSample(单次, 软件触发, MEM0->MEM1) + MEM1 中断.
+ * ★两路鉴相电压输入引脚/通道按你硬件确认(占位 TODO). */
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+#define H_PD_CHAN_A         DL_ADC12_INPUT_CHAN_1   /* TODO: ADC1 鉴相A 通道 */
+#define H_PD_CHAN_B         DL_ADC12_INPUT_CHAN_2   /* TODO: ADC1 鉴相B 通道 */
+#define H_PD_PIN_A_IOMUX    IOMUX_PINCM2            /* TODO: 鉴相A 引脚 */
+#define H_PD_PIN_B_IOMUX    IOMUX_PINCM3            /* TODO: 鉴相B 引脚 */
+#endif
+
 /* ---- P1: 触发源(由 h_config.h 的 H_ACQ_USE_TIMER_TRIGGER 选择) ----
  * 定时器模式: ADC 触发源=事件, 每个事件触发下一次转换; ADC0/ADC1 订阅同一事件通道
  *   => 同一时刻采样(零时间差). 软件模式: 软件启动 + 自动连转(原路径, 作回退). */
@@ -57,6 +67,10 @@
 
 static volatile uint8_t s_dma_done    = 0U;
 static volatile uint8_t s_fb_dma_done = 0U;
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+static volatile uint8_t  s_pd_done    = 0U;   /* 鉴相 2 通道转换完成标志 */
+static volatile uint16_t s_pd_raw[2]  = {0u, 0u};  /* 两路鉴相 ADC 原始码 */
+#endif
 
 #if H_ACQ_USE_TIMER_TRIGGER
 /* 采样定时器启停: 用于"停表->两路都使能->启表", 保证第一个事件同时命中两路(块对齐+零时间差). */
@@ -152,6 +166,54 @@ void SigAcq_initFeedback(void)
     adc_setup(H_FB_INST, H_FB_CHAN, H_FB_MEM, H_FB_PIN_IOMUX,
               H_FB_DMA_CHAN, &kDmaCfgFb, H_FB_INT_IRQN);
 }
+
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+/* 模拟鉴相: ADC1 配 2 通道单次序列(MEM0=鉴相A, MEM1=鉴相B), 软件触发, MEM1 完成中断. */
+void SigAcq_initPD(void)
+{
+    DL_ADC12_reset(H_FB_INST);
+    DL_ADC12_enablePower(H_FB_INST);
+    delay_cycles(16);
+    DL_GPIO_initPeripheralAnalogFunction(H_PD_PIN_A_IOMUX);
+    DL_GPIO_initPeripheralAnalogFunction(H_PD_PIN_B_IOMUX);
+    DL_ADC12_setClockConfig(H_FB_INST, (DL_ADC12_ClockConfig *)&kAdcClk);
+    DL_ADC12_initSeqSample(H_FB_INST,
+        DL_ADC12_REPEAT_MODE_DISABLED, DL_ADC12_SAMPLING_SOURCE_AUTO,
+        DL_ADC12_TRIG_SRC_SOFTWARE, DL_ADC12_SEQ_START_ADDR_00, DL_ADC12_SEQ_END_ADDR_01,
+        DL_ADC12_SAMP_CONV_RES_12_BIT, DL_ADC12_SAMP_CONV_DATA_FORMAT_UNSIGNED);
+    DL_ADC12_configConversionMem(H_FB_INST, DL_ADC12_MEM_IDX_0, H_PD_CHAN_A,
+        DL_ADC12_REFERENCE_VOLTAGE_VDDA, DL_ADC12_SAMPLE_TIMER_SOURCE_SCOMP0,
+        DL_ADC12_AVERAGING_MODE_DISABLED, DL_ADC12_BURN_OUT_SOURCE_DISABLED,
+        DL_ADC12_TRIGGER_MODE_AUTO_NEXT, DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
+    DL_ADC12_configConversionMem(H_FB_INST, DL_ADC12_MEM_IDX_1, H_PD_CHAN_B,
+        DL_ADC12_REFERENCE_VOLTAGE_VDDA, DL_ADC12_SAMPLE_TIMER_SOURCE_SCOMP0,
+        DL_ADC12_AVERAGING_MODE_DISABLED, DL_ADC12_BURN_OUT_SOURCE_DISABLED,
+        DL_ADC12_TRIGGER_MODE_AUTO_NEXT, DL_ADC12_WINDOWS_COMP_MODE_DISABLED);
+    DL_ADC12_setPowerDownMode(H_FB_INST, DL_ADC12_POWER_DOWN_MODE_MANUAL);
+    DL_ADC12_setSampleTime0(H_FB_INST, H_ADC_SAMPLE_TIME);
+    DL_ADC12_clearInterruptStatus(H_FB_INST, DL_ADC12_INTERRUPT_MEM1_RESULT_LOADED);
+    DL_ADC12_enableInterrupt(H_FB_INST, DL_ADC12_INTERRUPT_MEM1_RESULT_LOADED);
+    DL_ADC12_enableConversions(H_FB_INST);
+    NVIC_EnableIRQ(H_FB_INT_IRQN);
+}
+
+/* 软件触发 ADC1 单次序列, 读两路鉴相 12 位码到 out[0]/out[1]. 成功返回1, 超时返回0. */
+uint8_t SigAcq_readPD(uint16_t *out)
+{
+    uint32_t t0 = Tick;
+    s_pd_done = 0U;
+    DL_ADC12_startConversion(H_FB_INST);
+    while (s_pd_done == 0U) {
+        __WFE();
+        if ((uint32_t)(Tick - t0) > (uint32_t)H_ACQ_TIMEOUT_MS) {
+            out[0] = 0u; out[1] = 0u; return 0u;   /* 防卡死 */
+        }
+    }
+    out[0] = s_pd_raw[0];
+    out[1] = s_pd_raw[1];
+    return 1u;
+}
+#endif  /* H_LOCK_ANALOG_PID */
 
 uint16_t SigAcq_capture(uint16_t *buf, uint16_t n)
 {
@@ -252,11 +314,20 @@ void ADC0_IRQHandler(void)
     }
 }
 
-/* ADC1 中断: 反馈路 DMA 搬完整块 -> 置标志 */
+/* ADC1 中断: 数字模式=反馈块 DMA 完成; 模拟模式=鉴相 2 通道序列(MEM1)完成 */
 void ADC1_IRQHandler(void)
 {
     switch (DL_ADC12_getPendingInterrupt(H_FB_INST)) {
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+        case DL_ADC12_IIDX_MEM1_RESULT_LOADED:
+            s_pd_raw[0] = (uint16_t)DL_ADC12_getMemResult(H_FB_INST, DL_ADC12_MEM_IDX_0);
+            s_pd_raw[1] = (uint16_t)DL_ADC12_getMemResult(H_FB_INST, DL_ADC12_MEM_IDX_1);
+            s_pd_done   = 1U;
+            DL_ADC12_enableConversions(H_FB_INST);   /* 重新使能下次单次转换 */
+            break;
+#else
         case DL_ADC12_IIDX_DMA_DONE: s_fb_dma_done = 1U; break;
+#endif
         default: break;
     }
 }

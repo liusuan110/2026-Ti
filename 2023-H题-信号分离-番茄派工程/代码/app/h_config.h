@@ -99,6 +99,31 @@
 #define H_TJC_TOUCH         1
 #endif
 
+/* ===================== 锁相方式(同频稳定显示的两条路线, 二选一) =====================
+ * 数字PLL(默认, 现有, 已离板验证): 第2路ADC采A'+B' -> FFT -> atan2提相位 -> II型数字PLL调FTW.
+ * 模拟鉴相+PID(新增, 学长思路): 外部模拟乘法器(原信号×AD9959正交本振)-> 直流电压(=相位误差),
+ *   ADC1读该电压 -> float PID 调 DDS 频率把相位拉到正交锁定. 固件更简单, 复杂度挪到模拟硬件.
+ * 上板可两条都烧、A/B 对比; 模拟路调不通可退回数字PLL. */
+#define H_LOCK_DIGITAL_PLL  0
+#define H_LOCK_ANALOG_PID   1
+#ifndef H_LOCK_METHOD
+#define H_LOCK_METHOD       H_LOCK_DIGITAL_PLL
+#endif
+
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+/* --- 模拟鉴相+PID 参数(全部上板可标定) --- */
+#define H_PD_OFFSET_V       1.65f      /* 鉴相器零相位(正交)静态输出电压(V), 上板用示波器标定 */
+#define H_PID_KP_50K        2.0f       /* 50kHz 处的基准比例增益(实际增益按频率调度) */
+#define H_PID_KI_50K        1.0f       /* 50kHz 处的基准积分增益 */
+#define H_PID_KD_50K        0.0f       /* 微分(默认关) */
+#define H_PID_GAIN_PER_HZ   (1.0f/50000.0f) /* 增益调度因子: 实际增益=基准×(freq×此因子), 归一到50kHz */
+#define H_PID_INT_MAX       2000.0f    /* 积分累加双向限幅(抗饱和) */
+#define H_PID_OUT_MAX       50.0f      /* PID 输出(频率微调)双向限幅(Hz); 够覆盖两晶振 ppm 频差 */
+#define H_PID_LOCK_VOLT     0.05f      /* |鉴相电压-偏置|<此值视为该路锁定(V), 上板标定 */
+#define H_PID_LOCK_FRAMES   8u         /* 连续多帧达标才置锁定 */
+#define H_QUAD_PHASE14      4096u      /* 正交本振相位 90°(AD9959 14位相位字: 16384=360°) */
+#endif
+
 /* 采样率 fs: 要分辨到 100kHz 三角波的 5 次谐波(500kHz) -> fs>1MSa/s; N 取 2 的幂.
  *  - 定时器触发(H_ACQ_USE_TIMER_TRIGGER=1): fs 精确 = 定时器BUSCLK / (LOAD+1).
  *    syscfg 的 TIMER_ADC 周期 977ns @80MHz -> LOAD=77 -> fs = 80e6/78 = 1025641 Hz(稳定, 无抖).

@@ -81,6 +81,8 @@
         <file path="app/pll_core.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.h"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/pll.c"           openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pid_core.h"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
+        <file path="app/pid_core.c"      openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/telemetry_core.h" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/telemetry_core.c" openOnCreation="false" excludeFromBuild="false" action="copy"> </file>
         <file path="app/telemetry.h"     openOnCreation="false" excludeFromBuild="false" action="copy"> </file>

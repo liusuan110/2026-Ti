@@ -64,3 +64,37 @@ void Reconstruct_setPhaseDiffDeg(uint8_t idx, uint16_t ref_cpow, int32_t deg)
     AD9959_setPhase(ch_of(idx), p);
     AD9959_IOUpdate();
 }
+
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+/* idx 0/1 -> 正交本振通道 CH2/CH3 */
+static uint8_t ref_ch_of(uint8_t idx)
+{
+    return (idx == 0u) ? (uint8_t)AD9959_CH2 : (uint8_t)AD9959_CH3;
+}
+
+void Reconstruct_initAnalog(void)
+{
+    DDS_init();                              /* AD9959 上电复位 */
+    AD9959_setAmp(AD9959_CH0, 1023u);        /* 4 通道满幅 */
+    AD9959_setAmp(AD9959_CH1, 1023u);
+    AD9959_setAmp(AD9959_CH2, 1023u);
+    AD9959_setAmp(AD9959_CH3, 1023u);
+    AD9959_IOUpdate();
+}
+
+void Reconstruct_setAnalog(uint8_t idx, float freq_hz, uint16_t ref_phase14)
+{
+    uint8_t oc = ch_of(idx);                 /* 输出 CH0/CH1 */
+    uint8_t rc = ref_ch_of(idx);             /* 正交本振 CH2/CH3 */
+    AD9959_setFreq(oc, freq_hz);
+    AD9959_setPhase(oc, 0u);                 /* 输出相位基准 0 */
+    AD9959_setFreq(rc, freq_hz);             /* 本振同频 */
+    AD9959_setPhase(rc, (uint16_t)(ref_phase14 & 0x3FFFu));  /* 90° + 发挥②偏移 */
+    /* 不在此 IOUpdate, 由 Reconstruct_update 4 通道一起生效 */
+}
+
+void Reconstruct_update(void)
+{
+    AD9959_IOUpdate();
+}
+#endif  /* H_LOCK_ANALOG_PID */

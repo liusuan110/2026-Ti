@@ -18,4 +18,11 @@ uint16_t SigAcq_capture(uint16_t *buf, uint16_t n);
 /* 双路近同步采集: C->c_buf(ADC0), 反馈 A'+B'->fb_buf(ADC1). 两 buf 均须 4 字节对齐. */
 uint16_t SigAcq_captureDual(uint16_t *c_buf, uint16_t *fb_buf, uint16_t n);
 
+#if H_LOCK_METHOD == H_LOCK_ANALOG_PID
+/* 模拟鉴相模式: ADC1 配 2 通道单次序列, 读两路鉴相直流电压 */
+void    SigAcq_initPD(void);
+/* 软件触发读两路鉴相 12 位码 -> out[0]/out[1]; 成功1/超时0 */
+uint8_t SigAcq_readPD(uint16_t *out);
+#endif
+
 #endif /* SIG_ACQ_H */
