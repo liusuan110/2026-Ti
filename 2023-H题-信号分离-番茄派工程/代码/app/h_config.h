@@ -100,14 +100,14 @@
 #endif
 
 /* ===================== 锁相方式(同频稳定显示的两条路线, 二选一) =====================
- * 数字PLL(默认, 现有, 已离板验证): 第2路ADC采A'+B' -> FFT -> atan2提相位 -> II型数字PLL调FTW.
- * 模拟鉴相+PID(新增, 学长思路): 外部模拟乘法器(原信号×AD9959正交本振)-> 直流电压(=相位误差),
+ * 数字PLL(替代/备份, 已离板验证): 第2路ADC采A'+B' -> FFT -> atan2提相位 -> II型数字PLL调FTW.
+ * 模拟鉴相+PID(主线/默认, 学长思路): 外部模拟乘法器(原信号×AD9959正交本振)-> 直流电压(=相位误差),
  *   ADC1读该电压 -> float PID 调 DDS 频率把相位拉到正交锁定. 固件更简单, 复杂度挪到模拟硬件.
  * 上板可两条都烧、A/B 对比; 模拟路调不通可退回数字PLL. */
 #define H_LOCK_DIGITAL_PLL  0
 #define H_LOCK_ANALOG_PID   1
 #ifndef H_LOCK_METHOD
-#define H_LOCK_METHOD       H_LOCK_DIGITAL_PLL
+#define H_LOCK_METHOD       H_LOCK_ANALOG_PID
 #endif
 
 #if H_LOCK_METHOD == H_LOCK_ANALOG_PID
