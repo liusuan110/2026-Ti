@@ -38,6 +38,7 @@ static int32_t    s_phase_deg[H_NUM_SIGNALS];     /* 发挥②相位偏移(度):
 static float      s_pd_volt[H_NUM_SIGNALS];       /* 最近鉴相电压(已去偏置, V), 遥测/锁定用 */
 static uint8_t    s_pid_lockcnt[H_NUM_SIGNALS];
 static uint8_t    s_pid_locked[H_NUM_SIGNALS];
+static uint8_t    s_pd_fail = 0u;     /* 鉴相 ADC 读超时标志(遥测可见) */
 #endif
 
 #if H_STAGE >= 3
@@ -103,7 +104,12 @@ static void H_App_trackAnalog(void)
         }
     }
 
-    (void)SigAcq_readPD(pd);   /* 读两路鉴相 12 位码 */
+    if (SigAcq_readPD(pd) == 0u) {    /* 鉴相 ADC 读超时: 不喂幻象误差跑飞 */
+        s_pd_fail = 1u;
+        for (i = 0u; i < (uint8_t)H_NUM_SIGNALS; i++) { s_pid_lockcnt[i] = 0u; s_pid_locked[i] = 0u; }
+        return;   /* 保持上一拍 DDS 驱动(维持上次 FTW), 跳过本拍 PID + 驱动 */
+    }
+    s_pd_fail = 0u;
     for (i = 0u; i < (uint8_t)H_NUM_SIGNALS; i++) {
         pid_param_t pp;
         float volt = ((float)pd[i] * 3.3f / 4096.0f) - H_PD_OFFSET_V;   /* 去偏置 -> 相位误差 */
@@ -162,6 +168,7 @@ static void H_App_fillTelemetry(tel_frame_t *tf)
 #else
         /* 模拟模式: ftw 字段借显鉴相电压(mV), locked=PID锁定 */
         tf->ftw[i]    = (uint32_t)((s_pd_volt[i] + H_PD_OFFSET_V) * 1000.0f);
+        tf->perr_q31[i] = (int32_t)s_pd_fail;   /* 模拟: perr 字段借显鉴相读超时标志 */
         tf->locked[i] = s_pid_locked[i];
 #endif
     }
