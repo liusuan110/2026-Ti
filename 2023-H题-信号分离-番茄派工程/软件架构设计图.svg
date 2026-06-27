@@ -1,14 +1,14 @@
 <svg viewBox="0 0 1240 660" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" role="img">
-  <title>2023 H题 信号分离 — 软件架构设计图(番茄派 MSPM0G3507)</title>
-  <desc>main→h_app编排层(采集→分析→建链/闭环→遥测+屏→固定节拍, 分阶段bring-up)→胶水层(sig_acq/sig_analysis/reconstruct/pll/telemetry/tjc_hmi/mathacl_util)→纯C算法核(*_core, 离板可单测)→驱动与库; host_test 5套验证5个纯C核。</desc>
+  <title>2023 H题 信号分离 — 软件架构设计图(主线:模拟鉴相 + PID)</title>
+  <desc>main→h_app编排层(采集→分析→建链/闭环→遥测+屏,5ms固定节拍,分阶段bring-up)→胶水层(sig_acq/sig_analysis/reconstruct/锁相后端/telemetry/tjc_hmi/mathacl)→纯C算法核(*_core,离板可单测;锁相后端主线pid_core、替代pll_core)→host_test验证。锁相后端用H_LOCK_METHOD在模拟PID(主线)与数字PLL(替代)间切换。</desc>
   <defs>
     <marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker>
     <marker id="a2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#16a34a"/></marker>
   </defs>
   <rect x="0" y="0" width="1240" height="660" fill="#ffffff"/>
-  <text x="620" y="30" font-size="18" font-weight="bold" fill="#0f172a" text-anchor="middle">图二 · 软件架构设计图</text>
+  <text x="620" y="30" font-size="18" font-weight="bold" fill="#0f172a" text-anchor="middle">图二 · 软件架构设计图(主线:模拟鉴相 + PID)</text>
 
-  <!-- legend (置于核层右侧空位, mathacl 下方无核) -->
+  <!-- legend -->
   <rect x="1056" y="250" width="160" height="68" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
   <rect x="1068" y="264" width="18" height="12" rx="3" fill="#dcfce7" stroke="#16a34a"/>
   <text x="1094" y="274" font-size="10.5" fill="#334155">绿=纯C算法核</text>
@@ -16,7 +16,7 @@
   <line x1="1068" y1="300" x2="1086" y2="300" stroke="#16a34a" stroke-width="1.7" stroke-dasharray="5 3"/>
   <text x="1094" y="304" font-size="10.5" fill="#334155">虚线=host验证</text>
 
-  <!-- Band ①: main + h_app (满宽, 7 路下垂) -->
+  <!-- Band ①: main + h_app -->
   <rect x="22" y="46" width="1194" height="60" rx="8" fill="#eef2ff" stroke="#6366f1"/>
   <text x="36" y="68" font-size="12.5" font-weight="bold" fill="#3730a3">main.c → SYSCFG_DL_init() → H_App_init() → while(1) H_App_loop()</text>
   <text x="36" y="90" font-size="11.5" fill="#4338ca">① 编排层 h_app:采集→分析(吸附网格)→建链/闭环→遥测+屏→5ms固定节拍 · 分阶段 bring-up H_STAGE 1/2/3/4</text>
@@ -24,30 +24,30 @@
   <!-- band labels -->
   <text x="26" y="130" font-size="12.5" font-weight="bold" fill="#475569">② 胶水层(依赖硬件/库)</text>
   <text x="26" y="240" font-size="12.5" font-weight="bold" fill="#15803d">③ 纯C算法核(离板可单测)</text>
-  <text x="26" y="350" font-size="12.5" font-weight="bold" fill="#475569">④ 离板验证 host_test(5套)</text>
+  <text x="26" y="350" font-size="12.5" font-weight="bold" fill="#475569">④ 离板验证 host_test</text>
   <text x="26" y="458" font-size="12.5" font-weight="bold" fill="#475569">⑤ 驱动(User) / 库 · 外设</text>
 
-  <!-- ② glue row: 7 boxes  x:24,196,368,540,712,884,1056 w=160 -->
+  <!-- ② glue row -->
   <g>
     <rect x="24" y="138" width="160" height="78" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
     <text x="104" y="164" font-size="12" fill="#0c4a6e" text-anchor="middle">sig_acq / 采集</text>
-    <text x="104" y="183" font-size="10" fill="#475569" text-anchor="middle">双ADC 定时器同步</text>
-    <text x="104" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">C(ADC0)+反馈(ADC1)</text>
+    <text x="104" y="183" font-size="10" fill="#475569" text-anchor="middle">C(ADC0 块采)</text>
+    <text x="104" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">+ 鉴相电压(ADC1)</text>
 
     <rect x="196" y="138" width="160" height="78" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
     <text x="276" y="164" font-size="12" fill="#0c4a6e" text-anchor="middle">sig_analysis / 分析</text>
     <text x="276" y="183" font-size="10" fill="#475569" text-anchor="middle">窗+归一化+FFT</text>
-    <text x="276" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">arm_cfft_q15+atan2</text>
+    <text x="276" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">测频(粗)+判波形</text>
 
     <rect x="368" y="138" width="160" height="78" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
     <text x="448" y="164" font-size="12" fill="#0c4a6e" text-anchor="middle">reconstruct / 重建</text>
     <text x="448" y="183" font-size="10" fill="#475569" text-anchor="middle">驱动 AD9959</text>
-    <text x="448" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">setFreq/Amp/Phase/Ftw</text>
+    <text x="448" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">4通道 + 正交本振</text>
 
-    <rect x="540" y="138" width="160" height="78" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
-    <text x="620" y="164" font-size="12" fill="#0c4a6e" text-anchor="middle">pll / 锁相</text>
-    <text x="620" y="183" font-size="10" fill="#475569" text-anchor="middle">II 型 PLL</text>
-    <text x="620" y="199" font-size="9.5" fill="#64748b" text-anchor="middle">调 FTW 锁频锁相</text>
+    <rect x="540" y="138" width="160" height="78" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+    <text x="620" y="164" font-size="12" fill="#9a3412" text-anchor="middle">锁相后端 / 调DDS</text>
+    <text x="620" y="183" font-size="10" fill="#9a3412" text-anchor="middle">主线 PID(读鉴相电压)</text>
+    <text x="620" y="199" font-size="9.5" fill="#c2410c" text-anchor="middle">替代 PLL · H_LOCK_METHOD</text>
 
     <rect x="712" y="138" width="160" height="78" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
     <text x="792" y="164" font-size="12" fill="#0c4a6e" text-anchor="middle">telemetry / 遥测</text>
@@ -64,7 +64,7 @@
     <text x="1136" y="190" font-size="10" fill="#475569" text-anchor="middle">MATHACL 封装</text>
   </g>
 
-  <!-- ③ cores: 5 boxes under ana/rec/pll/tel/tjc -->
+  <!-- ③ cores -->
   <g>
     <rect x="196" y="248" width="160" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
     <text x="276" y="273" font-size="11.5" fill="#14532d" text-anchor="middle">sig_analysis_core</text>
@@ -75,9 +75,12 @@
     <text x="448" y="278" font-size="11.5" fill="#14532d" text-anchor="middle">reconstruct_core</text>
     <text x="448" y="298" font-size="9.5" fill="#475569" text-anchor="middle">FTW / CPOW 换算</text>
 
-    <rect x="540" y="248" width="160" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
-    <text x="620" y="278" font-size="11.5" fill="#14532d" text-anchor="middle">pll_core</text>
-    <text x="620" y="298" font-size="9.5" fill="#475569" text-anchor="middle">II型数字PLL · int64积分</text>
+    <rect x="540" y="248" width="160" height="34" rx="7" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="620" y="263" font-size="11" fill="#14532d" text-anchor="middle">pid_core(主线)</text>
+    <text x="620" y="277" font-size="9" fill="#475569" text-anchor="middle">float PID · 增益调度</text>
+    <rect x="540" y="286" width="160" height="32" rx="7" fill="#ecfdf5" stroke="#16a34a" stroke-dasharray="4 3"/>
+    <text x="620" y="300" font-size="11" fill="#15803d" text-anchor="middle">pll_core(替代)</text>
+    <text x="620" y="313" font-size="9" fill="#64748b" text-anchor="middle">II型PLL · int64积分</text>
 
     <rect x="712" y="248" width="160" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
     <text x="792" y="278" font-size="11.5" fill="#14532d" text-anchor="middle">telemetry_core</text>
@@ -89,26 +92,26 @@
     <text x="964" y="306" font-size="9.5" fill="#475569" text-anchor="middle">触摸解析状态机</text>
   </g>
 
-  <!-- ④ host_test: 5 boxes -->
+  <!-- ④ host_test -->
   <g>
     <rect x="196" y="358" width="160" height="56" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
     <text x="276" y="385" font-size="11" fill="#334155" text-anchor="middle">test_sig_analysis</text>
-    <text x="276" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">11/11</text>
+    <text x="276" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">✓</text>
     <rect x="368" y="358" width="160" height="56" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
     <text x="448" y="385" font-size="11" fill="#334155" text-anchor="middle">test_reconstruct</text>
-    <text x="448" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">18/18</text>
+    <text x="448" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">✓</text>
     <rect x="540" y="358" width="160" height="56" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
-    <text x="620" y="385" font-size="11" fill="#334155" text-anchor="middle">test_pll(三时钟域)</text>
-    <text x="620" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">6/6</text>
+    <text x="620" y="382" font-size="11" fill="#334155" text-anchor="middle">test_pid · test_pll</text>
+    <text x="620" y="401" font-size="9.5" fill="#64748b" text-anchor="middle">PID数学 / 三时钟域 ✓</text>
     <rect x="712" y="358" width="160" height="56" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
     <text x="792" y="385" font-size="11" fill="#334155" text-anchor="middle">test_telemetry</text>
-    <text x="792" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">31/31</text>
+    <text x="792" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">✓</text>
     <rect x="884" y="358" width="160" height="56" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
     <text x="964" y="385" font-size="11" fill="#334155" text-anchor="middle">test_tjc_hmi</text>
-    <text x="964" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">46/46</text>
+    <text x="964" y="402" font-size="10.5" font-weight="bold" fill="#16a34a" text-anchor="middle">✓</text>
   </g>
 
-  <!-- ⑤ drivers/libs: 6 boxes -->
+  <!-- ⑤ drivers/libs -->
   <g>
     <rect x="24" y="466" width="180" height="58" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
     <text x="114" y="492" font-size="12" fill="#1e293b" text-anchor="middle">AD9959 驱动</text>
@@ -126,7 +129,7 @@
     <text x="1110" y="510" font-size="10" fill="#64748b" text-anchor="middle">ADC/DMA/GPIO/UART/Timer</text>
   </g>
 
-  <!-- edges: h_app -> glue (fan, 7) -->
+  <!-- edges: h_app -> glue (7) -->
   <path d="M104,106 L104,138" fill="none" stroke="#64748b" stroke-width="1.3" marker-end="url(#a1)"/>
   <path d="M276,106 L276,138" fill="none" stroke="#64748b" stroke-width="1.3" marker-end="url(#a1)"/>
   <path d="M448,106 L448,138" fill="none" stroke="#64748b" stroke-width="1.3" marker-end="url(#a1)"/>
@@ -135,24 +138,23 @@
   <path d="M964,106 L964,138" fill="none" stroke="#64748b" stroke-width="1.3" marker-end="url(#a1)"/>
   <path d="M1136,106 L1136,138" fill="none" stroke="#64748b" stroke-width="1.3" marker-end="url(#a1)"/>
 
-  <!-- glue -> core (5 vertical) -->
+  <!-- glue -> core (5) -->
   <path d="M276,216 L276,248" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
   <path d="M448,216 L448,248" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
   <path d="M620,216 L620,248" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
   <path d="M792,216 L792,248" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
   <path d="M964,216 L964,248" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
 
-  <!-- core -> test (5 dashed verify) -->
+  <!-- core -> test (5 dashed) -->
   <path d="M276,318 L276,358" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
   <path d="M448,318 L448,358" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
   <path d="M620,318 L620,358" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
   <path d="M792,318 L792,358" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
   <path d="M964,318 L964,358" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
 
-  <!-- pll -> reconstruct (setFtw) -->
-  <path d="M540,177 L528,177" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#a1)"/>
-  <text x="534" y="169" font-size="10" fill="#334155" text-anchor="middle">setFtw</text>
+  <!-- 锁相后端 -> reconstruct -->
+  <path d="M540,177 L528,177" fill="none" stroke="#c2410c" stroke-width="1.5" marker-end="url(#a1)"/>
+  <text x="534" y="169" font-size="10" fill="#9a3412" text-anchor="middle">调DDS</text>
 
-  <!-- data flow / lib note -->
-  <text x="36" y="556" font-size="11" fill="#94a3b8">数据流(每帧):采集 → 分析(吸附网格)→(首帧)建链 /(之后)锁相 → AD9959 输出;每轮(抽稀)经 telemetry/tjc_hmi 推送;⑤ 被 ② 调用以访问硬件</text>
+  <text x="36" y="556" font-size="11" fill="#94a3b8">数据流(每帧):采集 → 分析(吸附网格)→(首帧)建链 /(之后)锁相后端 → AD9959 输出;每轮(抽稀)经 telemetry/tjc_hmi 推送;⑤ 被 ② 调用以访问硬件</text>
 </svg>

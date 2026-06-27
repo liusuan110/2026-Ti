@@ -1,134 +1,115 @@
-<svg viewBox="0 0 1240 800" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" role="img">
-  <title>2023 H题 信号分离 — 硬件连接结构图(番茄派 MSPM0G3507 + AD9959)</title>
-  <desc>信号源A/B经NE5532加法器得C,进ADC0通道2(PA25);TIMA0定时器同时触发ADC0/ADC1(零时间差);MSPM0经软件SPI驱动AD9959出A'/B',经重构滤波运放到示波器;A'+B'反馈引回ADC1供PLL锁相(代码已就绪,硬件待接);UART0遥测到电脑、UART1驱动淘晶驰串口屏(结果/波形/触摸/多页)。</desc>
+<svg viewBox="0 0 1240 710" xmlns="http://www.w3.org/2000/svg" font-family="'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif" role="img">
+  <title>2023 H题 信号分离 — 硬件连接结构图(主线:模拟鉴相 + PID)</title>
+  <desc>信号源A/B经NE5532加法器得C;C一路经偏置抗混叠LPF进ADC0(PA25)做FFT测频,一路进模拟乘法器;AD9959经软件SPI输出CH0/CH1=A'/B'到重构滤波运放与示波器,CH2/CH3=正交本振LO到乘法器;乘法器(C×LO)经低通留直流、抬偏置1.65V后进ADC1作鉴相电压;固件读电压跑PID微调DDS频率正交锁定;替代方案全数字PLL改为A'+B'引回ADC1。</desc>
   <defs>
     <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#64748b"/></marker>
-    <marker id="afb" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c2410c"/></marker>
-    <marker id="au" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#7c3aed"/></marker>
-    <marker id="aus" markerWidth="9" markerHeight="9" refX="2" refY="3" orient="auto"><path d="M7,0 L0,3 L7,6 Z" fill="#7c3aed"/></marker>
+    <marker id="apd" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#c2410c"/></marker>
   </defs>
-  <rect x="0" y="0" width="1240" height="800" fill="#ffffff"/>
-  <text x="620" y="30" font-size="18" font-weight="bold" fill="#0f172a" text-anchor="middle">图一 · 硬件连接结构图</text>
+  <rect x="0" y="0" width="1240" height="710" fill="#ffffff"/>
+  <text x="620" y="30" font-size="18" font-weight="bold" fill="#0f172a" text-anchor="middle">图一 · 硬件连接结构图(主线:模拟鉴相 + PID)</text>
 
   <!-- legend -->
-  <rect x="24" y="46" width="470" height="150" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
-  <text x="40" y="66" font-size="12" font-weight="bold" fill="#0f172a">引脚 / 说明</text>
-  <text x="40" y="86" font-size="11.5" fill="#334155">· ADC 输入 C:PA25(ADC0 通道2)· TIMA0 定时器同时触发 ADC0/ADC1</text>
-  <text x="40" y="105" font-size="11.5" fill="#334155">· AD9959 软件SPI:SCLK=PA7 · SDIO0=PB2 · CS=PB3 · UPDATE=PA8 · RST=PA9</text>
-  <text x="40" y="124" font-size="11.5" fill="#7c3aed">· UART0 遥测:TX=PA10 RX=PA11 · 115200 → 电脑</text>
-  <text x="40" y="143" font-size="11.5" fill="#7c3aed">· UART1 串口屏:TX=PA17 RX=PA18 · 115200(RX中断)</text>
-  <text x="40" y="162" font-size="11.5" fill="#c2410c">· PLL 反馈:A'+B' → ADC1(代码已就绪,硬件待接)</text>
-  <text x="40" y="181" font-size="11.5" fill="#334155">· 三角波(发挥①)由模拟硬件链生成,固件只出正弦</text>
+  <rect x="24" y="44" width="572" height="150" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="40" y="63" font-size="12" font-weight="bold" fill="#0f172a">引脚 / 说明</text>
+  <text x="40" y="82" font-size="11.5" fill="#334155">· ADC 输入 C:PA25(ADC0 通道2)· TIMA0 触发 ADC0 锁 fs</text>
+  <text x="40" y="100" font-size="11.5" fill="#334155">· AD9959 软件SPI:SCLK=PA7 · SDIO0=PB2 · CS=PB3 · UPDATE=PA8 · RST=PA9</text>
+  <text x="40" y="118" font-size="11.5" fill="#7c3aed">· UART0 遥测→电脑 PA10/11 · UART1 串口屏 PA17/18(本图略)</text>
+  <text x="40" y="136" font-size="11.5" fill="#c2410c">· 鉴相:C × 正交本振(CH2/CH3)→ 乘法器 → LPF → 偏置1.65V → ADC1</text>
+  <text x="40" y="154" font-size="11.5" fill="#c2410c">   两路鉴相电压 PD_A/PD_B,ADC1 引脚占位 TODO,上板确认</text>
+  <text x="40" y="172" font-size="11.5" fill="#64748b">· 替代(全数字PLL):改 A'+B'→ADC1 · 三角波(发挥①)由模拟链生成</text>
 
-  <!-- 信号源 group -->
-  <rect x="24" y="252" width="142" height="196" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
-  <text x="95" y="274" font-size="12.5" font-weight="bold" fill="#475569" text-anchor="middle">信号源(独立晶振)</text>
-  <rect x="39" y="288" width="112" height="62" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
-  <text x="95" y="314" font-size="13" fill="#1e293b" text-anchor="middle">信号源 A</text>
-  <text x="95" y="332" font-size="11" fill="#64748b" text-anchor="middle">20~100kHz</text>
-  <rect x="39" y="372" width="112" height="62" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
-  <text x="95" y="398" font-size="13" fill="#1e293b" text-anchor="middle">信号源 B</text>
-  <text x="95" y="416" font-size="11" fill="#64748b" text-anchor="middle">5kHz 整数倍</text>
+  <!-- 信号源 -->
+  <rect x="24" y="230" width="142" height="190" rx="10" fill="#f1f5f9" stroke="#94a3b8" stroke-dasharray="4 3"/>
+  <text x="95" y="251" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">信号源(独立晶振)</text>
+  <rect x="39" y="264" width="112" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="95" y="288" font-size="13" fill="#1e293b" text-anchor="middle">信号源 A</text>
+  <text x="95" y="306" font-size="11" fill="#64748b" text-anchor="middle">20~100kHz</text>
+  <rect x="39" y="344" width="112" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="95" y="368" font-size="13" fill="#1e293b" text-anchor="middle">信号源 B</text>
+  <text x="95" y="386" font-size="11" fill="#64748b" text-anchor="middle">5kHz 整数倍</text>
 
-  <!-- 加法器 -->
-  <rect x="182" y="300" width="124" height="66" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
-  <text x="244" y="328" font-size="12.5" fill="#1e293b" text-anchor="middle">NE5532 加法器</text>
-  <text x="244" y="348" font-size="11" fill="#64748b" text-anchor="middle">C=A+B 【基本①】</text>
+  <!-- 加法器 / C调理 -->
+  <rect x="182" y="278" width="120" height="62" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="242" y="304" font-size="12.5" fill="#1e293b" text-anchor="middle">NE5532 加法器</text>
+  <text x="242" y="324" font-size="11" fill="#64748b" text-anchor="middle">C=A+B 【基本①】</text>
+  <rect x="320" y="278" width="120" height="62" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="380" y="304" font-size="12.5" fill="#1e293b" text-anchor="middle">C 输入调理</text>
+  <text x="380" y="324" font-size="11" fill="#64748b" text-anchor="middle">偏置+抗混叠LPF</text>
 
-  <!-- C 调理 -->
-  <rect x="322" y="300" width="124" height="66" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
-  <text x="384" y="328" font-size="12.5" fill="#1e293b" text-anchor="middle">C 输入调理</text>
-  <text x="384" y="348" font-size="11" fill="#64748b" text-anchor="middle">偏置+抗混叠LPF</text>
+  <!-- MCU -->
+  <rect x="458" y="200" width="226" height="300" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="571" y="220" font-size="12" font-weight="bold" fill="#1d4ed8" text-anchor="middle">MSPM0G3507(SYSOSC→80MHz)</text>
+  <rect x="473" y="232" width="196" height="46" rx="8" fill="#e0e7ff" stroke="#6366f1"/>
+  <text x="571" y="251" font-size="12" fill="#3730a3" text-anchor="middle">TIMA0 / TIMER_ADC</text>
+  <text x="571" y="269" font-size="10.5" fill="#4338ca" text-anchor="middle">触发 ADC0 · 锁 fs</text>
+  <rect x="473" y="288" width="196" height="50" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="571" y="308" font-size="12" fill="#1e293b" text-anchor="middle">ADC0 通道2 / PA25</text>
+  <text x="571" y="326" font-size="10.5" fill="#475569" text-anchor="middle">ADC12+FIFO+DMA · N=1024</text>
+  <rect x="473" y="348" width="196" height="52" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="571" y="369" font-size="12.5" fill="#1e293b" text-anchor="middle">固件:FFT 测频(粗)</text>
+  <text x="571" y="387" font-size="11" fill="#475569" text-anchor="middle">+ PID 闭环(主线)</text>
+  <rect x="473" y="410" width="196" height="58" rx="8" fill="#fff7ed" stroke="#c2410c"/>
+  <text x="571" y="434" font-size="12" fill="#9a3412" text-anchor="middle">ADC1:读 2 路鉴相电压</text>
+  <text x="571" y="452" font-size="10.5" fill="#c2410c" text-anchor="middle">PD_A/PD_B(引脚TODO)</text>
 
-  <!-- MCU group -->
-  <rect x="462" y="214" width="226" height="318" rx="10" fill="#eff6ff" stroke="#3b82f6"/>
-  <text x="575" y="234" font-size="12" font-weight="bold" fill="#1d4ed8" text-anchor="middle">MSPM0G3507(片内SYSOSC→80MHz · 128KB/32KB)</text>
-  <rect x="477" y="246" width="196" height="54" rx="8" fill="#e0e7ff" stroke="#6366f1"/>
-  <text x="575" y="268" font-size="12" fill="#3730a3" text-anchor="middle">TIMA0 / TIMER_ADC</text>
-  <text x="575" y="286" font-size="10.5" fill="#4338ca" text-anchor="middle">周期975ns · 同时触发 ADC0+ADC1(零时间差)</text>
-  <rect x="477" y="312" width="196" height="56" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
-  <text x="575" y="334" font-size="12" fill="#1e293b" text-anchor="middle">ADC0 通道2 / PA25</text>
-  <text x="575" y="352" font-size="10.5" fill="#475569" text-anchor="middle">ADC12+FIFO+DMA · N=1024 · fs=1.0256MSa/s</text>
-  <rect x="477" y="380" width="196" height="52" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
-  <text x="575" y="402" font-size="12.5" fill="#1e293b" text-anchor="middle">固件:FFT分析(吸附网格)</text>
-  <text x="575" y="420" font-size="11" fill="#475569" text-anchor="middle">+ 软件 PLL</text>
-  <rect x="477" y="444" width="196" height="62" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-dasharray="5 3"/>
-  <text x="575" y="468" font-size="12" fill="#9a3412" text-anchor="middle">ADC1 反馈通道</text>
-  <text x="575" y="486" font-size="10.5" fill="#c2410c" text-anchor="middle">采A'+B'(通道/引脚占位TODO,待接)</text>
+  <!-- AD9959 -->
+  <rect x="708" y="222" width="152" height="250" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
+  <text x="784" y="242" font-size="12" font-weight="bold" fill="#15803d" text-anchor="middle">AD9959(25M×20=500M)</text>
+  <rect x="723" y="252" width="122" height="42" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="784" y="278" font-size="12.5" fill="#1e293b" text-anchor="middle">CH0 → A'</text>
+  <rect x="723" y="300" width="122" height="42" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="784" y="326" font-size="12.5" fill="#1e293b" text-anchor="middle">CH1 → B'</text>
+  <rect x="723" y="352" width="122" height="42" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="784" y="378" font-size="11.5" fill="#9a3412" text-anchor="middle">CH2 → 本振 LO_A 90°</text>
+  <rect x="723" y="400" width="122" height="42" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="784" y="426" font-size="11.5" fill="#9a3412" text-anchor="middle">CH3 → 本振 LO_B 90°</text>
 
-  <!-- AD9959 group -->
-  <rect x="712" y="252" width="150" height="196" rx="10" fill="#f0fdf4" stroke="#16a34a"/>
-  <text x="787" y="274" font-size="12" font-weight="bold" fill="#15803d" text-anchor="middle">AD9959(25M×20=500M)</text>
-  <rect x="727" y="288" width="120" height="56" rx="8" fill="#dcfce7" stroke="#16a34a"/>
-  <text x="787" y="321" font-size="13" fill="#1e293b" text-anchor="middle">CH0 → A'</text>
-  <rect x="727" y="372" width="120" height="56" rx="8" fill="#dcfce7" stroke="#16a34a"/>
-  <text x="787" y="405" font-size="13" fill="#1e293b" text-anchor="middle">CH1 → B'</text>
+  <!-- 重构 / 三角波 / 示波器 -->
+  <rect x="884" y="252" width="132" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="950" y="277" font-size="12.5" fill="#1e293b" text-anchor="middle">重构LPF+运放</text>
+  <text x="950" y="295" font-size="11" fill="#64748b" text-anchor="middle">A'/B' ≥1Vpp</text>
+  <rect x="884" y="322" width="132" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="4 3"/>
+  <text x="950" y="346" font-size="12.5" fill="#1e293b" text-anchor="middle">三角波模拟链</text>
+  <text x="950" y="364" font-size="11" fill="#64748b" text-anchor="middle">【发挥①】</text>
+  <rect x="1048" y="266" width="90" height="96" rx="8" fill="#f1f5f9" stroke="#475569"/>
+  <text x="1093" y="308" font-size="12.5" fill="#1e293b" text-anchor="middle">示波器</text>
+  <text x="1093" y="326" font-size="10.5" fill="#64748b" text-anchor="middle">同频显示</text>
 
-  <!-- 重构 -->
-  <rect x="884" y="294" width="134" height="64" rx="8" fill="#f8fafc" stroke="#94a3b8"/>
-  <text x="951" y="320" font-size="12.5" fill="#1e293b" text-anchor="middle">重构LPF+运放</text>
-  <text x="951" y="338" font-size="11" fill="#64748b" text-anchor="middle">A'/B' ≥1Vpp</text>
+  <!-- ===== edges (上半) ===== -->
+  <path d="M151,293 L182,300" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M151,373 L167,373 L167,322 L182,322" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M302,309 L320,309" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M440,309 L456,309 L456,313 L473,313" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M571,278 L571,288" fill="none" stroke="#6366f1" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M571,338 L571,348" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M571,410 L571,400" fill="none" stroke="#c2410c" stroke-width="1.6" marker-end="url(#apd)"/>
+  <path d="M669,360 L690,360 L690,263 L708,263" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text x="699" y="280" font-size="10" fill="#334155" text-anchor="middle">软件SPI</text>
+  <path d="M845,273 L884,273" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M845,321 L865,321 L865,289 L884,289" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M1016,281 L1032,281 L1032,300 L1048,300" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M1016,351 L1032,351 L1032,330 L1048,330" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <path d="M950,310 L950,322" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
 
-  <!-- 三角波 -->
-  <rect x="884" y="398" width="134" height="64" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="4 3"/>
-  <text x="951" y="424" font-size="12.5" fill="#1e293b" text-anchor="middle">三角波模拟链</text>
-  <text x="951" y="442" font-size="11" fill="#64748b" text-anchor="middle">【发挥①】</text>
+  <!-- ===== 模拟鉴相前端(下移, 走线分层) ===== -->
+  <path d="M740,586 L740,512 L440,512 L440,439 L473,439" fill="none" stroke="#c2410c" stroke-width="1.7" marker-end="url(#apd)"/>
+  <text x="500" y="505" font-size="11" font-weight="bold" fill="#c2410c" text-anchor="middle">鉴相电压 → ADC1</text>
+  <path d="M723,373 L700,373 L700,542 L525,542 L525,586" fill="none" stroke="#c2410c" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#apd)"/>
+  <text x="618" y="535" font-size="10.5" fill="#c2410c" text-anchor="middle">CH2 本振 LO_A 90°</text>
+  <path d="M242,340 L242,616 L460,616" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text x="232" y="476" font-size="10.5" fill="#475569" text-anchor="middle" transform="rotate(-90 232 476)">C 馈鉴相</text>
 
-  <!-- 示波器 -->
-  <rect x="1044" y="314" width="92" height="100" rx="8" fill="#f1f5f9" stroke="#475569"/>
-  <text x="1090" y="358" font-size="12.5" fill="#1e293b" text-anchor="middle">示波器</text>
-  <text x="1090" y="376" font-size="10.5" fill="#64748b" text-anchor="middle">同频显示</text>
-
-  <!-- 电脑(遥测) -->
-  <rect x="486" y="650" width="186" height="70" rx="8" fill="#faf5ff" stroke="#7c3aed"/>
-  <text x="579" y="680" font-size="12.5" fill="#5b21b6" text-anchor="middle">电脑 / 串口助手</text>
-  <text x="579" y="700" font-size="11" fill="#7c3aed" text-anchor="middle">串口遥测调试</text>
-
-  <!-- 串口屏 -->
-  <rect x="726" y="650" width="262" height="70" rx="8" fill="#faf5ff" stroke="#7c3aed"/>
-  <text x="857" y="678" font-size="12.5" fill="#5b21b6" text-anchor="middle">淘晶驰串口屏 TJC4827X243</text>
-  <text x="857" y="700" font-size="11" fill="#7c3aed" text-anchor="middle">结果 / 实时波形 / 触摸 / 多页</text>
-
-  <!-- ===== edges ===== -->
-  <!-- 信号链 -->
-  <path d="M151,316 L182,320" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M151,398 L167,398 L167,344 L182,344" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M306,333 L322,333" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M446,333 L460,333 L460,340 L477,340" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-
-  <!-- 定时器触发两路 -->
-  <path d="M575,300 L575,312" fill="none" stroke="#6366f1" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M495,300 L470,300 L470,470 L477,470" fill="none" stroke="#6366f1" stroke-width="1.6" marker-end="url(#ah)"/>
-  <text x="455" y="392" font-size="10" fill="#4338ca" text-anchor="middle" transform="rotate(-90 455 392)">硬件事件同触</text>
-
-  <!-- ADC0 -> FW -->
-  <path d="M575,368 L575,380" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <!-- ADC1 反馈相位 -> FW (dashed) -->
-  <path d="M673,470 L682,470 L682,406 L673,406" fill="none" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#afb)"/>
-  <text x="700" y="440" font-size="10" fill="#c2410c" text-anchor="middle">反馈相位</text>
-
-  <!-- FW -> AD9959 软件SPI -->
-  <path d="M673,406 L692,406 L692,340 L712,340" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <text x="694" y="332" font-size="10.5" fill="#334155" text-anchor="middle">软件SPI(5线)</text>
-
-  <!-- CH -> 重构 -->
-  <path d="M847,316 L865,316 L865,320 L884,320" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M847,400 L865,400 L865,336 L884,336" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-
-  <!-- 重构 -> 示波器 / 三角波, 三角波 -> 示波器 -->
-  <path d="M1018,326 L1031,326 L1031,348 L1044,348" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M951,358 L951,398" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-  <path d="M1018,430 L1031,430 L1031,380 L1044,380" fill="none" stroke="#64748b" stroke-width="1.6" marker-end="url(#ah)"/>
-
-  <!-- 反馈 dashed: 重构 -> ADC1 -->
-  <path d="M900,358 L900,604 L452,604 L452,478 L477,478" fill="none" stroke="#c2410c" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#afb)"/>
-  <text x="690" y="596" font-size="11.5" font-weight="bold" fill="#c2410c" text-anchor="middle">反馈:A'+B' 经运放引回 ADC1(硬件待接)</text>
-
-  <!-- UART0 遥测: FW -> 电脑 -->
-  <path d="M477,394 L430,394 L430,636 L579,636 L579,650" fill="none" stroke="#7c3aed" stroke-width="1.7" marker-end="url(#au)"/>
-  <text x="418" y="520" font-size="10.5" fill="#7c3aed" text-anchor="middle" transform="rotate(-90 418 520)">UART0 遥测 PA10/PA11 115200</text>
-
-  <!-- UART1 串口屏: FW <-> 屏 (双向) -->
-  <path d="M673,418 L696,418 L696,628 L857,628 L857,650" fill="none" stroke="#7c3aed" stroke-width="1.7" marker-start="url(#aus)" marker-end="url(#au)"/>
-  <text x="708" y="540" font-size="10.5" fill="#7c3aed" text-anchor="middle" transform="rotate(-90 708 540)">UART1 PA17/PA18 115200 RX中断</text>
+  <text x="250" y="572" font-size="13" font-weight="bold" fill="#9a3412">模拟鉴相前端 · 主线核心(乘法器鉴相 → PID 正交锁定)</text>
+  <rect x="460" y="586" width="130" height="60" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="525" y="611" font-size="12.5" fill="#9a3412" text-anchor="middle">乘法器 A</text>
+  <text x="525" y="629" font-size="11" fill="#c2410c" text-anchor="middle">C × LO_A</text>
+  <rect x="612" y="586" width="82" height="60" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="653" y="611" font-size="12.5" fill="#9a3412" text-anchor="middle">低通 LPF</text>
+  <text x="653" y="629" font-size="10.5" fill="#c2410c" text-anchor="middle">去2ω/拍频</text>
+  <rect x="716" y="586" width="150" height="60" rx="8" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="791" y="611" font-size="12.5" fill="#9a3412" text-anchor="middle">抬偏置 1.65V</text>
+  <text x="791" y="629" font-size="10.5" fill="#c2410c" text-anchor="middle">正交零点 → PD_A</text>
+  <path d="M590,616 L612,616" fill="none" stroke="#c2410c" stroke-width="1.6" marker-end="url(#apd)"/>
+  <path d="M694,616 L716,616" fill="none" stroke="#c2410c" stroke-width="1.6" marker-end="url(#apd)"/>
+  <text x="250" y="678" font-size="11.5" fill="#9a3412">B 路同构:C × CH3(LO_B)→ 乘法器B → LPF → 偏置 → ADC1.1(PD_B)</text>
 </svg>
