@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "ad9959.h": "c",
+        "ti_msp_dl_config.h": "c",
+        "stdint.h": "c",
+        "usertask.h": "c",
+        "ad8310.h": "c",
+        "useradc.h": "c",
+        "interrupts.h": "c",
+        "circuittester.h": "c",
+        "dds.h": "c",
+        "correction.h": "c",
+        "useruart.h": "c",
+        "usertimer.h": "c",
+        "tick.h": "c",
+        "freqresponsetester.h": "c",
+        "ui.h": "c",
+        "iqmathlib.h": "c",
+        "frt_types.h": "c",
+        "arm_math.h": "c",
+        "arm_const_structs.h": "c",
+        "rgbled.h": "c",
+        "signalseparator.h": "c",
+        "spectrumanalyzer.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "cl.exe"
+}

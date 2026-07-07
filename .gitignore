@@ -1,2 +1,27 @@
 # 培训资料:仅排除两个大压缩包(各十几MB,本地保留),其余文件正常入库
 培训资料/*.zip
+
+# CCS / TI build outputs
+**/Debug/
+**/Release/
+**/build/
+**/.clangd/.cache/
+*.out
+*.map
+*.o
+*.d
+*.d_raw
+*.obj
+*.elf
+*.hex
+*_linkInfo.xml
+
+# IDE / user-local files
+*.uvguix.*
+*.uvguix
+*.dbgconf
+JLinkSettings.ini
+.metadata/
+
+# Temporary working folders
+tmp/
