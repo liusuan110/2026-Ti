@@ -1,0 +1,12 @@
+/**
+ * Minimal SysConfig scaffold for the tomato-board MSPM0G3507.
+ * Peripheral configuration is intentionally deferred.
+ */
+//@cliArgs --device "MSPM0G350X" --package "LQFP-48(PT)" --part "Default"
+//@v2CliArgs --device "MSPM0G3507" --package "LQFP-48(PT)" --product "mspm0_sdk@2.10.00.04"
+
+const SYSCTL        = scripting.addModule("/ti/driverlib/SYSCTL");
+const ProjectConfig = scripting.addModule("/ti/project_config/ProjectConfig");
+const Board         = scripting.addModule("/ti/driverlib/Board", {}, false);
+
+ProjectConfig.deviceSpin = "MSPM0G3507";

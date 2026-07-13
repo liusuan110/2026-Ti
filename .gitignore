@@ -6,6 +6,7 @@
 **/Release/
 **/build/
 **/.clangd/.cache/
+**/.clangd
 *.out
 *.map
 *.o
@@ -22,6 +23,10 @@
 *.dbgconf
 JLinkSettings.ini
 .metadata/
+**/.theia/
+**/.vscode/
+**/*.theia-workspace
+**/*.theia-workspace.bak
 
 # Temporary working folders
 tmp/

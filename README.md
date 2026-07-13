@@ -4,6 +4,8 @@
 
 ## 当前主线
 
+- 培训4，2013 E题番茄派 CCS 空工程：
+  `2013-E题-简易频率特性测试仪-番茄派工程/代码/FrequencyResponseTester`
 - 当前准备继续推进的工程：
   `2023-H题-信号分离-番茄派工程/代码/SignalSeparator_v2`
 - 旧 H 工程备份/阶段工程：
@@ -19,7 +21,7 @@
 
 - `SignalSeparator_v2` 的 AD9959 接线与旧 H 工程不同。
 - `SignalSeparator_v2` 的主输入 C 为 `ADC0 PA27`。
-- 仓库不保存 CCS/Keil 生成物，例如 `Debug/`、`build/`、`*.out`、`*.o`、`*.d`。
+- 仓库不保存 CCS/Keil 生成物，例如 `Debug/`、`build/`、`.clangd`、`.theia/`、`*.theia-workspace`、`*.out`、`*.o`、`*.d`。
 - 厂商资料中的压缩包本地保留，仓库主要保存解压后的手册、例程和说明。
 
 ## 建议工作流

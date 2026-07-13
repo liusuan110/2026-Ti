@@ -117,7 +117,7 @@
     <storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
     <storageModule moduleId="refreshScope" versionNumber="2">
         <configuration configurationName="Debug">
-            <resource resourceType="PROJECT" workspacePath="/FrequencyResponseTester_v3"/>
+            <resource resourceType="PROJECT" workspacePath="/SignalSeparator_v2"/>
         </configuration>
     </storageModule>
     <storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
